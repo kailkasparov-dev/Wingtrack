@@ -16,6 +16,54 @@ router.get('/', requireAuth, requireRole('admin'), async (_req, res: Response) =
   res.json(data)
 })
 
+// POST /api/staff/register — Public sign-up / register new staff
+router.post('/register', async (req, res: Response): Promise<void> => {
+  const { email, password, full_name, role } = req.body as {
+    email: string
+    password: string
+    full_name: string
+    role: 'cashier' | 'inventory_personnel' | 'admin'
+  }
+
+  if (!email || !password || !full_name || !role) {
+    res.status(400).json({ message: 'email, password, full_name, and role are required.' })
+    return
+  }
+
+  // Create auth user using admin API (bypasses email confirmation)
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+
+  if (authError || !authData?.user) {
+    res.status(400).json({ message: authError?.message ?? 'Failed to create auth user.' })
+    return
+  }
+
+  // Create staff profile
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('staff_profiles')
+    .insert({
+      user_id:   authData.user.id,
+      full_name,
+      email,
+      role,
+      is_active: true,
+    })
+    .select()
+    .single()
+
+  if (profileError) {
+    await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+    res.status(400).json({ message: profileError.message })
+    return
+  }
+
+  res.status(201).json({ message: 'Account created successfully.', profile })
+})
+
 // POST /api/staff — Admin only: provision a new staff account
 router.post(
   '/',

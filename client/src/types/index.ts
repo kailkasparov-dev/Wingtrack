@@ -121,3 +121,39 @@ export interface CreateInventoryItemPayload {
   supplier?: string
 }
 
+export interface CashierShift {
+  id: string
+  cashier_id: string
+  opening_float: number
+  closing_cash?: number | null
+  expected_cash?: number | null
+  cash_difference?: number | null
+  total_sales?: number
+  cash_sales?: number
+  gcash_sales?: number
+  card_sales?: number
+  orders_count?: number
+  status: 'open' | 'closed'
+  notes?: string | null
+  opened_at: string
+  closed_at?: string | null
+  cashier?: { full_name: string; email?: string }
+}
+
+export interface ShiftSummaryData {
+  cashier_name: string
+  opening_float: number
+  closing_cash: number
+  expected_cash: number
+  cash_difference: number
+  cash_sales: number
+  gcash_sales: number
+  card_sales: number
+  total_sales: number
+  orders_count: number
+  opened_at: string
+  closed_at: string
+  notes?: string | null
+}
+
+

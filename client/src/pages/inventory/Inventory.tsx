@@ -47,6 +47,7 @@ export default function Inventory() {
   const [movements, setMovements] = useState<InventoryMovement[]>([])
   const [movementsLoading, setMovementsLoading] = useState(false)
   const [movementsError, setMovementsError] = useState<string | null>(null)
+  const [movementFilter, setMovementFilter] = useState<'all' | 'restock' | 'waste' | 'adjustment' | 'deduction'>('all')
 
   // Add Item modal state
   const [showAddModal, setShowAddModal] = useState(false)
@@ -186,6 +187,29 @@ export default function Inventory() {
     }
   }
 
+  function exportInventoryCSV() {
+    const headers = ['Item Name', 'Category', 'Unit', 'Stock Qty', 'Min Stock Level', 'Unit Cost (PHP)', 'Total Valuation (PHP)', 'Status', 'Supplier']
+    const rows = items.map(item => [
+      `"${item.name.replace(/"/g, '""')}"`,
+      `"${item.category}"`,
+      `"${item.unit}"`,
+      Number(item.stock_qty),
+      Number(item.min_stock_level),
+      Number(item.unit_cost),
+      (Number(item.stock_qty) * Number(item.unit_cost)).toFixed(2),
+      `"${getItemStatus(item).toUpperCase()}"`,
+      `"${(item.supplier ?? '').replace(/"/g, '""')}"`,
+    ])
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `wingtrack-inventory-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div style={{ padding: '28px 36px', minHeight: '100vh' }}>
       {/* Header */}
@@ -199,7 +223,31 @@ export default function Inventory() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            id="btn-export-inventory-csv"
+            type="button"
+            className="btn-ghost"
+            onClick={exportInventoryCSV}
+            style={{
+              padding: '9px 14px',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              border: '1px solid var(--border)',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export CSV
+          </button>
+
+
+
           <button
             id="btn-add-inventory-item"
             className="btn-primary"
@@ -418,7 +466,7 @@ export default function Inventory() {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 75px 95px 95px 105px 135px 85px 175px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
                 {['Item Name', 'Unit', 'In Stock', 'Min Level', 'Unit Cost', 'Supplier', 'Status', 'Actions'].map(h => (
                   <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
@@ -431,7 +479,7 @@ export default function Inventory() {
                   <div
                     key={item.id}
                     style={{
-                      display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0,
+                      display: 'grid', gridTemplateColumns: '2fr 75px 95px 95px 105px 135px 85px 175px', gap: 0,
                       padding: '14px 22px', borderBottom: i < filtered.length - 1 ? '1px solid var(--muted)' : 'none',
                       alignItems: 'center', transition: 'background 0.1s',
                     }}
@@ -448,11 +496,21 @@ export default function Inventory() {
                     <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)' }}>&#8369;{Number(item.unit_cost).toLocaleString()}</span>
                     <span style={{ fontSize: 12, color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.supplier ?? '-'}</span>
                     <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 700, background: s.bg, color: s.color, textAlign: 'center', display: 'inline-block' }}>{s.label}</span>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 5 }}>
                       <button
                         id={`inv-restock-${item.id}`}
-                        onClick={() => { setAdjustModal({ item, type: 'restock' }); setAdjustQty(''); setAdjustNotes('') }}
-                        style={{ fontSize: 12, padding: '5px 11px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
+                        title="Manual stock adjustment"
+                        onClick={() => { setAdjustModal({ item, type: 'adjustment' }); setAdjustQty(''); setAdjustNotes('') }}
+                        style={{
+                          fontSize: 11,
+                          padding: '4px 8px',
+                          borderRadius: 5,
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                          color: 'var(--muted-foreground)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                        }}
                       >
                         Adjust
                       </button>
@@ -469,6 +527,32 @@ export default function Inventory() {
       ) : (
         /* Movements Audit Table */
         <div>
+          {/* Movement Type Filter Bar */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Filter Type:
+            </span>
+            {(['all', 'restock', 'waste', 'deduction', 'adjustment'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setMovementFilter(t)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: movementFilter === t ? 'var(--primary)' : 'var(--card)',
+                  color: movementFilter === t ? '#ffffff' : 'var(--foreground)',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {t === 'all' ? 'All Movements' : t === 'waste' ? 'Waste / Spoilage' : t === 'deduction' ? 'POS Deductions' : t}
+              </button>
+            ))}
+          </div>
+
           {movementsLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}>
               <div className="spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
@@ -479,12 +563,14 @@ export default function Inventory() {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '150px 200px 120px 100px 140px 140px 1fr', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
                 {['Timestamp', 'Item', 'Type', 'Change', 'Before → After', 'Staff', 'Notes'].map(h => (
                   <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
               </div>
-              {movements.map((m, i) => {
+              {movements
+                .filter(m => movementFilter === 'all' || m.movement_type === movementFilter)
+                .map((m, i, arr) => {
                 const dateStr = new Date(m.created_at).toLocaleString('en-PH', {
                   month: 'short',
                   day: 'numeric',
@@ -500,8 +586,8 @@ export default function Inventory() {
                   <div
                     key={m.id}
                     style={{
-                      display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0,
-                      padding: '12px 20px', borderBottom: i < movements.length - 1 ? '1px solid var(--muted)' : 'none',
+                      display: 'grid', gridTemplateColumns: '150px 200px 120px 100px 140px 140px 1fr', gap: 0,
+                      padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid var(--muted)' : 'none',
                       alignItems: 'center', fontSize: 13,
                     }}
                   >

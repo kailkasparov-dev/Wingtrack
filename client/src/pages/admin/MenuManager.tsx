@@ -301,7 +301,7 @@ export default function MenuManager() {
               <rect x="14" y="14" width="7" height="7"/>
               <rect x="3" y="14" width="7" height="7"/>
             </svg>
-            + Add Category
+            Add Category
           </button>
 
           <button
@@ -314,7 +314,7 @@ export default function MenuManager() {
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            + Add Food Item
+            Add Food Item
           </button>
         </div>
       </div>
@@ -732,6 +732,7 @@ export default function MenuManager() {
                     onChange={e => setFormCatId(e.target.value)}
                     style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
                   >
+                    <option value="" disabled>Select a category…</option>
                     {categories.map(c => (
                       <option key={c.id} value={c.id}>
                         {c.name}

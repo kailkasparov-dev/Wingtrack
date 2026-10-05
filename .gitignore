@@ -19,14 +19,20 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Editor files
+# Editor & build files
 .vscode/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.tsbuildinfo
+
+# Local certs
+certs/
+client/certs/
 
 # pnpm
 pnpm-lock.yaml

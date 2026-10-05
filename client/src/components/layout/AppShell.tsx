@@ -56,6 +56,7 @@ export default function AppShell() {
           {safePage === 'inventory'  && <Inventory />}
           {safePage === 'analytics'  && <Analytics />}
           {safePage === 'staff'      && <StaffManager />}
+
         </div>
       </main>
     </div>

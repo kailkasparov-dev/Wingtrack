@@ -148,133 +148,159 @@ export default function OrdersList() {
         </div>
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 150px 1fr 100px 110px 100px 140px', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
-            {['Order #', 'Date & Time', 'Items Summary', 'Payment', 'Total', 'Status', 'Actions'].map(h => (
-              <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {h}
-              </span>
-            ))}
-          </div>
-
-          {filteredOrders.map((order, i) => {
-            const isVoid = order.status === 'void'
-            const dateStr = new Date(order.created_at).toLocaleString('en-PH', {
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true,
-            })
-            const itemsSummary = (order.order_items ?? [])
-              .map(item => `${item.quantity}x ${item.product_name}`)
-              .join(', ')
-
-            return (
-              <div
-                key={order.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '80px 150px 1fr 100px 110px 100px 140px',
-                  gap: 0,
-                  padding: '14px 20px',
-                  borderBottom: i < filteredOrders.length - 1 ? '1px solid var(--muted)' : 'none',
-                  alignItems: 'center',
-                  background: isVoid ? 'rgba(254, 242, 242, 0.4)' : 'transparent',
-                }}
-              >
-                <span style={{ fontFamily: 'DM Mono', fontWeight: 700, fontSize: 13, color: 'var(--foreground)' }}>
-                  #{order.order_number}
-                </span>
-
-                <span style={{ fontSize: 12, color: 'var(--muted-foreground)', fontFamily: 'DM Mono' }}>
-                  {dateStr}
-                </span>
-
-                <div style={{ paddingRight: 16 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {itemsSummary || 'No items'}
-                  </p>
-                  {order.notes && (
-                    <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2, fontStyle: 'italic' }}>
-                      {order.notes}
-                    </p>
-                  )}
-                </div>
-
-                <span style={{ fontSize: 12, textTransform: 'uppercase', fontFamily: 'DM Mono', color: 'var(--muted-foreground)' }}>
-                  {order.payment_method}
-                </span>
-
-                <span style={{ fontSize: 14, fontFamily: 'DM Mono', fontWeight: 700, color: isVoid ? '#9ca3af' : 'var(--foreground)', textDecoration: isVoid ? 'line-through' : 'none' }}>
-                  ₱{Number(order.total_amount).toFixed(2)}
-                </span>
-
-                <div>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      padding: '3px 8px',
-                      borderRadius: 12,
-                      fontWeight: 600,
-                      background: isVoid ? '#fee2e2' : '#e8f5e9',
-                      color: isVoid ? '#b91c1c' : '#15803d',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {order.status}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ minWidth: 840 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '75px 145px minmax(0, 1fr) 90px 115px 105px 145px', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+                {['Order #', 'Date & Time', 'Items Summary', 'Payment', 'Total', 'Status', 'Actions'].map(h => (
+                  <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {h}
                   </span>
-                </div>
-
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    onClick={() => setSelectedReceiptOrder(order)}
-                    style={{
-                      fontSize: 12,
-                      padding: '5px 9px',
-                      borderRadius: 6,
-                      border: '1px solid var(--border)',
-                      background: 'var(--card)',
-                      color: 'var(--foreground)',
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                    }}
-                    title="View & Print Receipt"
-                  >
-                    Receipt
-                  </button>
-
-                  {!isVoid && (
-                    <button
-                      onClick={() => {
-                        setVoidModalOrder(order)
-                        setVoidReason('')
-                        setVoidError(null)
-                      }}
-                      style={{
-                        fontSize: 12,
-                        padding: '5px 9px',
-                        borderRadius: 6,
-                        border: '1px solid #fecaca',
-                        background: '#fef2f2',
-                        color: '#b91c1c',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                      }}
-                      title="Void this transaction and reverse stock deductions"
-                    >
-                      Void
-                    </button>
-                  )}
-                </div>
+                ))}
               </div>
+
+              {filteredOrders.map((order, i) => {
+                const isVoid = order.status === 'void'
+                const dateStr = new Date(order.created_at).toLocaleString('en-PH', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                })
+                const itemsSummary = (order.order_items ?? [])
+                  .map(item => `${item.quantity}x ${item.product_name}`)
+                  .join(', ')
+
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '75px 145px minmax(0, 1fr) 90px 115px 105px 145px',
+                      gap: 0,
+                      padding: '14px 20px',
+                      borderBottom: i < filteredOrders.length - 1 ? '1px solid var(--muted)' : 'none',
+                      alignItems: 'center',
+                      background: isVoid ? 'rgba(254, 242, 242, 0.4)' : 'transparent',
+                    }}
+                  >
+                    <span style={{ fontFamily: 'DM Mono', fontWeight: 700, fontSize: 13, color: 'var(--foreground)' }}>
+                      #{order.order_number}
+                    </span>
+
+                    <span style={{ fontSize: 12, color: 'var(--muted-foreground)', fontFamily: 'DM Mono' }}>
+                      {dateStr}
+                    </span>
+
+                    <div style={{ paddingRight: 16, minWidth: 0, overflow: 'hidden' }}>
+                      <p
+                        title={itemsSummary}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: 'var(--foreground)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          margin: 0,
+                          display: 'block',
+                          maxWidth: '100%',
+                        }}
+                      >
+                        {itemsSummary || 'No items'}
+                      </p>
+                      {order.notes && (
+                        <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {order.notes}
+                        </p>
+                      )}
+                    </div>
+
+                    <span style={{ fontSize: 12, textTransform: 'uppercase', fontFamily: 'DM Mono', color: 'var(--muted-foreground)' }}>
+                      {order.payment_method}
+                    </span>
+
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontFamily: 'DM Mono',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        color: isVoid ? '#9ca3af' : 'var(--foreground)',
+                        textDecoration: isVoid ? 'line-through' : 'none',
+                      }}
+                    >
+                      &#8369;{Number(order.total_amount).toFixed(2)}
+                    </span>
+
+                    <div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 8px',
+                          borderRadius: 12,
+                          fontWeight: 600,
+                          background: isVoid ? '#fee2e2' : '#e8f5e9',
+                          color: isVoid ? '#b91c1c' : '#15803d',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {order.status}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => setSelectedReceiptOrder(order)}
+                        style={{
+                          fontSize: 12,
+                          padding: '5px 9px',
+                          borderRadius: 6,
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                          color: 'var(--foreground)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                        }}
+                        title="View & Print Receipt"
+                      >
+                        Receipt
+                      </button>
+
+                      {!isVoid && (
+                        <button
+                          onClick={() => {
+                            setVoidModalOrder(order)
+                            setVoidReason('')
+                            setVoidError(null)
+                          }}
+                          style={{
+                            fontSize: 12,
+                            padding: '5px 9px',
+                            borderRadius: 6,
+                            border: '1px solid #fecaca',
+                            background: '#fef2f2',
+                            color: '#b91c1c',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                          title="Void this transaction and reverse stock deductions"
+                        >
+                          Void
+                        </button>
+                      )}
+                    </div>
+                  </div>
             )
           })}
 
-          {filteredOrders.length === 0 && (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 14 }}>
-              No orders found matching your criteria.
+            {filteredOrders.length === 0 && (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 14 }}>
+                No orders found matching your criteria.
+              </div>
+            )}
             </div>
-          )}
+          </div>
         </div>
       )}
 

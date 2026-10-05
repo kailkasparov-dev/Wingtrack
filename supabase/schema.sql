@@ -459,3 +459,40 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order ON public.order_items (order_id
 CREATE INDEX IF NOT EXISTS idx_inv_mov_inventory ON public.inventory_movements (inventory_id);
 CREATE INDEX IF NOT EXISTS idx_inv_mov_order     ON public.inventory_movements (order_id);
 CREATE INDEX IF NOT EXISTS idx_staff_user_id     ON public.staff_profiles (user_id);
+
+-- ============================================================
+-- 8. CASHIER SHIFTS (Float & Z-Reading Tracking)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.cashier_shifts (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cashier_id      UUID NOT NULL REFERENCES public.staff_profiles(id),
+    opening_float   NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    closing_cash    NUMERIC(10, 2),
+    expected_cash   NUMERIC(10, 2),
+    cash_difference NUMERIC(10, 2),
+    total_sales     NUMERIC(10, 2) DEFAULT 0,
+    cash_sales      NUMERIC(10, 2) DEFAULT 0,
+    orders_count    INT DEFAULT 0,
+    status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    notes           TEXT,
+    opened_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    closed_at       TIMESTAMPTZ
+);
+
+ALTER TABLE public.cashier_shifts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "shifts_all_admin" ON public.cashier_shifts;
+CREATE POLICY "shifts_all_admin" ON public.cashier_shifts
+    FOR ALL USING (public.get_current_user_role() = 'admin');
+
+DROP POLICY IF EXISTS "shifts_cashier" ON public.cashier_shifts;
+CREATE POLICY "shifts_cashier" ON public.cashier_shifts
+    FOR ALL USING (
+        public.get_current_user_role() = 'admin'
+        OR cashier_id = (SELECT id FROM public.staff_profiles WHERE user_id = (SELECT auth.uid()))
+    );
+
+CREATE INDEX IF NOT EXISTS idx_shifts_cashier ON public.cashier_shifts (cashier_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_status  ON public.cashier_shifts (status);
+

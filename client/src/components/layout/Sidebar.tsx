@@ -83,6 +83,7 @@ function StaffIcon({ active }: { active: boolean }) {
   )
 }
 
+
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard',     roles: ['admin'],                       icon: DashIcon   },
   { id: 'pos',       label: 'Point of Sale',  roles: ['admin', 'cashier'],            icon: PosIcon    },

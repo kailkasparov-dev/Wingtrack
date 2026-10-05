@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
-import { apiCheckout } from '@/lib/api'
+import { apiCheckout, apiGetActiveShift } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
-import type { Product, ProductCategory, CartItem, Order } from '@/types'
+import type { Product, ProductCategory, CartItem, Order, CashierShift, ShiftSummaryData } from '@/types'
 import ReceiptModal from '@/components/receipt/ReceiptModal'
 import CashPaymentCalculator from '@/components/cashier/CashPaymentCalculator'
+import ShiftModal from '@/components/cashier/ShiftModal'
+import ZReadingModal from '@/components/analytics/ZReadingModal'
 
 const DEFAULT_CATS = ['All', 'Wings', 'Sizzling', 'Silog', 'Shake', 'Burger', 'Fries & Pure Cheesestick']
 
@@ -70,6 +72,26 @@ export default function PointOfSale() {
   const [showCashCalc, setShowCashCalc] = useState(false)
   const [lastCashReceived, setLastCashReceived] = useState<number | null>(null)
   const [lastChangeGiven, setLastChangeGiven] = useState<number | null>(null)
+
+  // Shift & Cash Drawer state
+  const [activeShift, setActiveShift] = useState<CashierShift | null>(null)
+  const [shiftModalMode, setShiftModalMode] = useState<'open' | 'close' | null>(null)
+  const [closingSummary, setClosingSummary] = useState<ShiftSummaryData | null>(null)
+  const [showShiftReading, setShowShiftReading] = useState(false)
+  const [shiftOrders, setShiftOrders] = useState<Order[]>([])
+
+  const fetchShift = useCallback(async () => {
+    try {
+      const res = await apiGetActiveShift()
+      setActiveShift(res.shift)
+    } catch {
+      setActiveShift(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchShift()
+  }, [fetchShift])
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -184,6 +206,7 @@ export default function PointOfSale() {
       setCheckoutSuccess(true)
       setCart([])
       setNotes('')
+      fetchShift()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Checkout failed')
     } finally {
@@ -209,11 +232,81 @@ export default function PointOfSale() {
     <div style={{ display: 'flex', width: '100%', height: '100%', minHeight: '100dvh', maxHeight: '100dvh', overflow: 'hidden' }}>
       {/* Menu Panel */}
       <div style={{ flex: 1, minWidth: 0, padding: '28px 32px', overflowY: 'auto', height: '100%' }}>
-        <div style={{ marginBottom: 22 }}>
-          <h1 style={{ fontFamily: 'Fraunces', fontSize: 30, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>Point of Sale</h1>
-          <p style={{ fontSize: 15, color: 'var(--muted-foreground)' }}>
-            {new Date().toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {profile?.full_name}
-          </p>
+        <div style={{ marginBottom: 22, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+          <div>
+            <h1 style={{ fontFamily: 'Fraunces', fontSize: 30, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>Point of Sale</h1>
+            <p style={{ fontSize: 14, color: 'var(--muted-foreground)' }}>
+              {new Date().toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · {profile?.full_name}
+            </p>
+          </div>
+
+          {/* Shift & Cash Float Status Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {activeShift ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#15803d' }}>Shift Active</span>
+                </div>
+                <div style={{ fontSize: 12, borderLeft: '1px solid var(--border)', paddingLeft: 10, color: 'var(--muted-foreground)' }}>
+                  Float: <strong style={{ color: 'var(--foreground)' }}>&#8369;{Number(activeShift.opening_float).toFixed(0)}</strong>
+                </div>
+                <div style={{ fontSize: 12, borderLeft: '1px solid var(--border)', paddingLeft: 10, color: 'var(--muted-foreground)' }}>
+                  Cash in Drawer: <strong style={{ color: '#ea580c' }}>&#8369;{Number(activeShift.expected_cash ?? activeShift.opening_float).toFixed(2)}</strong>
+                </div>
+                <button
+                  type="button"
+                  id="btn-close-pos-shift"
+                  onClick={() => setShiftModalMode('close')}
+                  style={{
+                    fontSize: 11.5,
+                    padding: '5px 10px',
+                    borderRadius: 6,
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#b91c1c',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  End Shift & Z-Reading
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                id="btn-open-pos-shift"
+                onClick={() => setShiftModalMode('open')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  background: '#fff7ed',
+                  color: '#ea580c',
+                  border: '1px solid #fed7aa',
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ea580c', display: 'inline-block' }} />
+                + Open Cashier Shift & Set Float
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Search & Category filter */}
@@ -503,6 +596,43 @@ export default function PointOfSale() {
       {/* Printable Receipt Modal */}
       {showReceipt && completedOrder && (
         <ReceiptModal order={completedOrder} onClose={() => setShowReceipt(false)} />
+      )}
+
+      {/* Cashier Shift Modal */}
+      {shiftModalMode && (
+        <ShiftModal
+          mode={shiftModalMode}
+          activeShift={activeShift}
+          cashierName={profile?.full_name ?? 'Cashier'}
+          onClose={() => setShiftModalMode(null)}
+          onSuccess={async (summary) => {
+            setShiftModalMode(null)
+            if (summary) {
+              setClosingSummary(summary)
+              const { data: ords } = await supabase
+                .from('orders')
+                .select('*, order_items(*)')
+                .eq('cashier_id', profile?.id)
+                .gte('created_at', summary.opened_at)
+              setShiftOrders((ords ?? []) as Order[])
+              setShowShiftReading(true)
+            }
+            await fetchShift()
+          }}
+        />
+      )}
+
+      {/* Shift Z-Reading Slip Modal */}
+      {showShiftReading && closingSummary && (
+        <ZReadingModal
+          type="Z-Reading"
+          periodLabel={`Shift (${new Date(closingSummary.opened_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })} - ${new Date(closingSummary.closed_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })})`}
+          orders={shiftOrders}
+          cashierName={closingSummary.cashier_name}
+          openingFloat={closingSummary.opening_float}
+          closingCash={closingSummary.closing_cash}
+          onClose={() => { setShowShiftReading(false); setClosingSummary(null) }}
+        />
       )}
     </div>
   )
