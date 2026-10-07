@@ -778,7 +778,22 @@ export default function Inventory() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>Measurement Unit *</label>
-                  <input className="input" required value={newItemUnit} onChange={e => setNewItemUnit(e.target.value)} placeholder="e.g. kg, liters, pcs" style={{ width: '100%', padding: '9px 12px', fontSize: 13 }} />
+                  <select
+                    className="input"
+                    required
+                    value={newItemUnit}
+                    onChange={e => setNewItemUnit(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 13 }}
+                  >
+                    <option value="kg">kg (kilogram)</option>
+                    <option value="lb">lb (pound)</option>
+                    <option value="g">g (gram)</option>
+                    <option value="pcs">pcs (pieces)</option>
+                    <option value="liters">liters</option>
+                    <option value="ml">ml (milliliter)</option>
+                    <option value="packs">packs</option>
+                    <option value="boxes">boxes</option>
+                  </select>
                 </div>
               </div>
 

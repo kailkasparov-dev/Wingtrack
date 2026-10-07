@@ -165,8 +165,32 @@ export default function Sidebar({ page, setPage }: SidebarProps) {
     >
       {/* Brand */}
       <div style={{ padding: '26px 24px 22px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          id="brand-logo-btn"
+          role="button"
+          tabIndex={0}
+          onClick={() => setPage('dashboard')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setPage('dashboard')
+            }
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            cursor: 'pointer',
+            userSelect: 'none',
+            borderRadius: 8,
+            transition: 'opacity 0.15s ease',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          title="Go to Dashboard"
+        >
           <div
+            id="brand-logo-img-wrapper"
             style={{
               width: 44,
               height: 44,

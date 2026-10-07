@@ -16,6 +16,15 @@ const roleBadge: Record<StaffRole, { bg: string; color: string }> = {
   inventory_personnel: { bg: 'rgba(30,64,175,0.1)',  color: '#1d4ed8' },
 }
 
+function checkPwd(p: string) {
+  return {
+    length:    p.length >= 8,
+    uppercase: /[A-Z]/.test(p),
+    number:    /[0-9]/.test(p),
+    special:   /[^A-Za-z0-9]/.test(p),
+  }
+}
+
 export default function StaffManager() {
   const [staff, setStaff] = useState<StaffProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,15 +34,22 @@ export default function StaffManager() {
   const [formError, setFormError] = useState<string | null>(null)
   const [formLoading, setFormLoading] = useState(false)
 
+  // Deactivation confirmation modal state
+  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deactivateLoading, setDeactivateLoading] = useState(false)
+
+  const reqs = checkPwd(form.password)
+  const allReqsMet = reqs.length && reqs.uppercase && reqs.number && reqs.special
+
   useEffect(() => {
-    if (showModal) {
+    if (showModal || deactivateTarget) {
       const prev = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       return () => {
         document.body.style.overflow = prev
       }
     }
-  }, [showModal])
+  }, [showModal, deactivateTarget])
 
   async function fetchStaff() {
     const { data } = await supabase
@@ -49,6 +65,12 @@ export default function StaffManager() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setFormError(null)
+
+    if (!allReqsMet) {
+      setFormError('Password must meet all requirements before creating the account.')
+      return
+    }
+
     setFormLoading(true)
     try {
       await apiCreateStaff(form)
@@ -62,13 +84,17 @@ export default function StaffManager() {
     }
   }
 
-  async function handleDeactivate(id: string, name: string) {
-    if (!confirm(`Deactivate ${name}? They will no longer be able to log in.`)) return
+  async function confirmDeactivate() {
+    if (!deactivateTarget) return
+    setDeactivateLoading(true)
     try {
-      await apiDeactivateStaff(id)
+      await apiDeactivateStaff(deactivateTarget.id)
+      setDeactivateTarget(null)
       await fetchStaff()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Deactivation failed')
+    } finally {
+      setDeactivateLoading(false)
     }
   }
 
@@ -154,7 +180,7 @@ export default function StaffManager() {
                 {s.is_active ? (
                   <button
                     id={`btn-deactivate-${s.id}`}
-                    onClick={() => handleDeactivate(s.id, s.full_name)}
+                    onClick={() => setDeactivateTarget({ id: s.id, name: s.full_name })}
                     style={{
                       fontSize: 12, padding: '5px 12px', borderRadius: 6,
                       background: 'transparent', border: '1px solid #fca5a5',
@@ -279,6 +305,30 @@ export default function StaffManager() {
                     )}
                   </button>
                 </div>
+
+                {/* Real-time Password Requirements Checklist */}
+                <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--muted)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+                    Password Requirements
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {[
+                      { label: '8+ characters', met: reqs.length },
+                      { label: '1 uppercase letter', met: reqs.uppercase },
+                      { label: '1 number', met: reqs.number },
+                      { label: '1 special character', met: reqs.special },
+                    ].map((r, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                        <span style={{ color: r.met ? '#15803d' : '#9ca3af', fontWeight: 700, fontSize: 13, lineHeight: 1 }}>
+                          {r.met ? '✓' : '○'}
+                        </span>
+                        <span style={{ color: r.met ? '#15803d' : 'var(--muted-foreground)', fontWeight: r.met ? 600 : 400 }}>
+                          {r.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div>
                 <label htmlFor="staff-role" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>Role</label>
@@ -299,11 +349,82 @@ export default function StaffManager() {
               )}
               <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
                 <button type="button" className="btn-ghost" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '12px' }}>Cancel</button>
-                <button id="btn-create-staff" type="submit" className="btn-primary" disabled={formLoading} style={{ flex: 2, padding: '12px' }}>
+                <button id="btn-create-staff" type="submit" className="btn-primary" disabled={formLoading || !allReqsMet} style={{ flex: 2, padding: '12px' }}>
                   {formLoading ? 'Creating...' : 'Create Account'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Deactivation Confirmation Modal */}
+      {deactivateTarget && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(3px)',
+            WebkitBackdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 20,
+          }}
+          onClick={e => { if (e.target === e.currentTarget && !deactivateLoading) setDeactivateTarget(null) }}
+        >
+          <div className="card fade-in" style={{ width: '100%', maxWidth: 420, padding: '28px 24px', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ fontFamily: 'Fraunces', fontSize: 18, fontWeight: 700, color: 'var(--foreground)' }}>Deactivate Staff Member</h3>
+                <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>Confirm account deactivation</p>
+              </div>
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--foreground)', lineHeight: 1.5, marginBottom: 20 }}>
+              Are you sure you want to deactivate <strong style={{ color: 'var(--foreground)' }}>{deactivateTarget.name}</strong>? They will immediately lose access to sign into the system.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={deactivateLoading}
+                onClick={() => setDeactivateTarget(null)}
+                style={{ padding: '10px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-deactivate-btn"
+                type="button"
+                disabled={deactivateLoading}
+                onClick={confirmDeactivate}
+                style={{
+                  padding: '10px 18px',
+                  background: 'var(--danger)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {deactivateLoading ? 'Deactivating...' : 'Yes, Deactivate'}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

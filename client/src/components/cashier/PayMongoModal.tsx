@@ -51,6 +51,7 @@ export default function PayMongoModal({
   const [expYear, setExpYear] = useState('')
   const [cvc, setCvc] = useState('')
   const [cardName, setCardName] = useState('')
+  const [cardRef, setCardRef] = useState('')
   const [intentId, setIntentId] = useState('')
 
   const amountCentavos = Math.round(total * 100)
@@ -377,6 +378,18 @@ export default function PayMongoModal({
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 5 }}>CVC</label>
                 <input className="input" placeholder="123" maxLength={4} value={cvc} onChange={e => setCvc(e.target.value.replace(/\D/g, ''))} style={{ padding: '11px 13px', fontSize: 14, fontFamily: 'DM Mono' }} />
               </div>
+            </div>
+
+            <div style={{ background: 'rgba(37,99,235,0.07)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 8, padding: '10px 13px' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#2563eb', marginBottom: 5 }}>CARD PAYMENT REFERENCE</p>
+              <input
+                className="input"
+                placeholder="e.g. Last 4 digits or approval code (optional)"
+                value={cardRef}
+                onChange={e => setCardRef(e.target.value.slice(0, 30))}
+                style={{ padding: '9px 12px', fontSize: 13, fontFamily: 'DM Mono', width: '100%' }}
+              />
+              <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 4 }}>Enter the last 4 digits or terminal approval code for records.</p>
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>

@@ -29,6 +29,7 @@ export default function MenuManager() {
   const [showItemModal, setShowItemModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null)
 
   // Item form state
   const [formName, setFormName] = useState('')
@@ -212,7 +213,13 @@ export default function MenuManager() {
   }
 
   async function handleDeleteProduct(prod: Product) {
-    if (!confirm(`Are you sure you want to delete "${prod.name}" from the menu?`)) return
+    setDeleteConfirm(prod)
+  }
+
+  async function confirmDeleteProduct() {
+    if (!deleteConfirm) return
+    const prod = deleteConfirm
+    setDeleteConfirm(null)
     try {
       await apiDeleteProduct(prod.id)
       setProducts(prev => prev.filter(p => p.id !== prod.id))
@@ -811,6 +818,7 @@ export default function MenuManager() {
                       required
                       placeholder="0.00"
                       value={formPrice}
+                      onKeyDown={e => { if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault() }}
                       onChange={e => {
                         const val = e.target.value
                         // Clamp to max immediately
@@ -1053,6 +1061,55 @@ export default function MenuManager() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001, padding: 20,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteConfirm(null) }}
+        >
+          <div className="card fade-in" style={{ padding: '32px 28px', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'rgba(185,28,28,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </div>
+            <h2 style={{ fontFamily: 'Fraunces', fontSize: 20, fontWeight: 700, color: 'var(--foreground)', marginBottom: 8 }}>Delete Menu Item?</h2>
+            <p style={{ fontSize: 14, color: 'var(--muted-foreground)', marginBottom: 6, lineHeight: 1.6 }}>
+              Are you sure you want to delete
+            </p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--foreground)', marginBottom: 20 }}>"{deleteConfirm.name}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--muted-foreground)', marginBottom: 22 }}>This will permanently remove the item from the menu. This action cannot be undone.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                id="btn-delete-cancel"
+                className="btn-ghost"
+                onClick={() => setDeleteConfirm(null)}
+                style={{ flex: 1, padding: '12px' }}
+              >
+                Cancel
+              </button>
+              <button
+                id="btn-delete-confirm"
+                onClick={confirmDeleteProduct}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8, fontSize: 14, fontWeight: 700,
+                  background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer',
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>,
         document.body

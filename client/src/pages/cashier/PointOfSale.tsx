@@ -72,6 +72,7 @@ export default function PointOfSale() {
   const [showPayMongo, setShowPayMongo] = useState(false)
   const [lastCashReceived, setLastCashReceived] = useState<number | null>(null)
   const [lastChangeGiven, setLastChangeGiven] = useState<number | null>(null)
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false)
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -277,8 +278,14 @@ export default function PointOfSale() {
   }
 
   function handleVoid() {
-    if (!confirm('Void this order? All items will be cleared.')) return
+    setShowVoidConfirm(true)
+  }
+
+  function confirmVoid() {
     setCart([])
+    setNotes('')
+    setError(null)
+    setShowVoidConfirm(false)
   }
 
   function dismissSuccess() {
@@ -594,6 +601,54 @@ export default function PointOfSale() {
               </button>
               <button id="btn-new-order" className="btn-primary" onClick={dismissSuccess} style={{ width: '100%', padding: '13px', fontSize: 15 }}>
                 New Order
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Void Confirmation Modal */}
+      {showVoidConfirm && createPortal(
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowVoidConfirm(false) }}
+        >
+          <div className="card fade-in" style={{ padding: '32px 28px', maxWidth: 380, width: '90%', textAlign: 'center', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'rgba(185,28,28,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </div>
+            <h2 style={{ fontFamily: 'Fraunces', fontSize: 20, fontWeight: 700, color: 'var(--foreground)', marginBottom: 8 }}>Void Order?</h2>
+            <p style={{ fontSize: 14, color: 'var(--muted-foreground)', marginBottom: 22, lineHeight: 1.6 }}>
+              This will clear all <strong>{cart.length} item{cart.length !== 1 ? 's' : ''}</strong> from the current order. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                id="btn-void-cancel"
+                className="btn-ghost"
+                onClick={() => setShowVoidConfirm(false)}
+                style={{ flex: 1, padding: '12px' }}
+              >
+                Cancel
+              </button>
+              <button
+                id="btn-void-confirm"
+                onClick={confirmVoid}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8, fontSize: 14, fontWeight: 700,
+                  background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer',
+                }}
+              >
+                Yes, Void Order
               </button>
             </div>
           </div>
