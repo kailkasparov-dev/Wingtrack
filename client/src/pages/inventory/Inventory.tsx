@@ -63,16 +63,21 @@ export default function Inventory() {
   // Export state
   const [exportFilter, setExportFilter] = useState<'week' | 'month'>('week')
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [reportModalData, setReportModalData] = useState<{
+    periodLabel: string
+    generatedAt: string
+    records: InventoryMovement[]
+  } | null>(null)
 
   useEffect(() => {
-    if (adjustModal || showAddModal) {
+    if (adjustModal || showAddModal || reportModalData) {
       const prev = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       return () => {
         document.body.style.overflow = prev
       }
     }
-  }, [adjustModal, showAddModal])
+  }, [adjustModal, showAddModal, reportModalData])
 
   const fetchInventory = useCallback(async () => {
     const { data, error } = await supabase
@@ -203,83 +208,14 @@ export default function Inventory() {
     const filtered = movements.filter(m => new Date(m.created_at) >= cutoff)
     const periodLabel = period === 'week' ? 'Last 7 Days' : 'Last 30 Days'
 
-    const rows = filtered.map(m => {
-      const dateStr = new Date(m.created_at).toLocaleString('en-PH', {
+    setReportModalData({
+      periodLabel,
+      generatedAt: now.toLocaleString('en-PH', {
         month: 'short', day: 'numeric', year: 'numeric',
         hour: 'numeric', minute: '2-digit', hour12: true,
-      })
-      const changeStr = m.qty_change > 0 ? `+${m.qty_change}` : String(m.qty_change)
-      return `
-        <tr>
-          <td>${dateStr}</td>
-          <td>${m.inventory?.name ?? 'Unknown'}</td>
-          <td style="text-transform:capitalize">${m.movement_type}</td>
-          <td style="color:${m.qty_change > 0 ? '#15803d' : '#b91c1c'}">${changeStr} ${m.inventory?.unit ?? ''}</td>
-          <td>${Number(m.qty_before).toFixed(2)} → ${Number(m.qty_after).toFixed(2)}</td>
-          <td>${m.staff?.full_name ?? 'System'}</td>
-          <td>${m.notes || '-'}</td>
-        </tr>`
-    }).join('')
-
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Inventory Report – ${periodLabel}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; color: #1c1917; padding: 24px 32px; background: #fff; }
-    .top-bar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid #e7e5e4; }
-    .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #44403c; background: #f5f5f4; border: 1px solid #d6d3d1; border-radius: 8px; cursor: pointer; text-decoration: none; transition: background 0.15s; }
-    .btn-back:hover { background: #e7e5e4; }
-    .btn-print { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; font-size: 13px; font-weight: 600; color: #fff; background: #ea580c; border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.15s; }
-    .btn-print:hover { opacity: 0.9; }
-    h1 { font-size: 22px; font-weight: 700; color: #1c1917; margin: 0 0 4px 0; }
-    p.meta { color: #78716c; font-size: 12px; margin: 0 0 20px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th { background: #f5f5f4; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #57534e; border-bottom: 2px solid #e7e5e4; }
-    td { padding: 10px 12px; border-bottom: 1px solid #f5f5f4; vertical-align: top; font-size: 13px; }
-    tr:last-child td { border-bottom: none; }
-    @media print {
-      .no-print { display: none !important; }
-      body { padding: 0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="no-print top-bar">
-    <button class="btn-back" onclick="if (window.opener) { window.opener.focus(); window.close(); } else { window.close(); }">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="19" y1="12" x2="5" y2="12"></line>
-        <polyline points="12 19 5 12 12 5"></polyline>
-      </svg>
-      Back to Inventory
-    </button>
-    <button class="btn-print" onclick="window.print()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-        <rect x="6" y="14" width="12" height="8"></rect>
-      </svg>
-      Print Report
-    </button>
-  </div>
-
-  <h1>WINGTRACK — Inventory Movement Report</h1>
-  <p class="meta">Period: ${periodLabel} &nbsp;|&nbsp; Generated: ${now.toLocaleString('en-PH')} &nbsp;|&nbsp; ${filtered.length} record(s)</p>
-  <table>
-    <thead><tr><th>Timestamp</th><th>Item</th><th>Type</th><th>Change</th><th>Before → After</th><th>Staff</th><th>Notes</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:#888;padding:24px">No records for this period.</td></tr>'}</tbody>
-  </table>
-</body>
-</html>`
-
-    const win = window.open('', '_blank')
-    if (win) {
-      win.document.write(html)
-      win.document.close()
-      win.focus()
-      setTimeout(() => win.print(), 400)
-    }
+      }),
+      records: filtered,
+    })
   }
 
   return (
@@ -859,6 +795,163 @@ export default function Inventory() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* In-App Inventory Movement Report Modal */}
+      {reportModalData && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 20,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setReportModalData(null) }}
+        >
+          <div
+            className="card fade-in"
+            style={{
+              width: '100%',
+              maxWidth: 920,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#fff',
+              color: '#1c1917',
+              padding: 0,
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+              borderRadius: 14,
+            }}
+          >
+            {/* Top Bar with Back Button */}
+            <div
+              style={{
+                padding: '14px 22px',
+                borderBottom: '1px solid #e7e5e4',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#fafaf9',
+              }}
+            >
+              <button
+                id="btn-back-to-inventory"
+                type="button"
+                onClick={() => setReportModalData(null)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '9px 16px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#44403c',
+                  background: '#f5f5f4',
+                  border: '1px solid #d6d3d1',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                ← Back to Inventory
+              </button>
+
+              <button
+                id="btn-print-inventory-report"
+                type="button"
+                onClick={() => window.print()}
+                className="btn-primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '9px 18px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 8,
+                  background: 'var(--primary)',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                  <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Print Report
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+              <div style={{ marginBottom: 18 }}>
+                <h2 style={{ fontFamily: 'Fraunces', fontSize: 22, fontWeight: 700, color: '#1c1917', marginBottom: 4 }}>
+                  WINGTRACK — Inventory Movement Report
+                </h2>
+                <p style={{ fontSize: 13, color: '#78716c' }}>
+                  Period: <strong style={{ color: '#1c1917' }}>{reportModalData.periodLabel}</strong> &nbsp;|&nbsp; Generated: {reportModalData.generatedAt} &nbsp;|&nbsp; {reportModalData.records.length} record(s)
+                </p>
+              </div>
+
+              <div style={{ overflowX: 'auto', border: '1px solid #e7e5e4', borderRadius: 8 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f4', borderBottom: '2px solid #e7e5e4' }}>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timestamp</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Item</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Change</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Before → After</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Staff</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportModalData.records.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', color: '#888', padding: '36px' }}>
+                          No records for this period.
+                        </td>
+                      </tr>
+                    ) : (
+                      reportModalData.records.map((m, idx) => (
+                        <tr key={m.id || idx} style={{ borderBottom: '1px solid #f5f5f4' }}>
+                          <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                            {new Date(m.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                          </td>
+                          <td style={{ padding: '10px 12px', fontWeight: 600 }}>{m.inventory?.name ?? 'Unknown'}</td>
+                          <td style={{ padding: '10px 12px', textTransform: 'capitalize' }}>{m.movement_type}</td>
+                          <td style={{ padding: '10px 12px', fontWeight: 600, color: m.qty_change > 0 ? '#15803d' : '#b91c1c' }}>
+                            {m.qty_change > 0 ? `+${m.qty_change}` : m.qty_change} {m.inventory?.unit ?? ''}
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            {Number(m.qty_before).toFixed(2)} → {Number(m.qty_after).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>{m.staff?.full_name ?? 'System'}</td>
+                          <td style={{ padding: '10px 12px', color: '#78716c' }}>{m.notes || '-'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>,
         document.body
