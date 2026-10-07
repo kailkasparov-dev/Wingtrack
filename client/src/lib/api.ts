@@ -59,27 +59,6 @@ export async function apiAdjustInventory(payload: InventoryAdjustmentPayload) {
 }
 
 /**
- * POST /api/staff/register (Public registration)
- */
-export async function apiRegisterStaff(data: {
-  email: string
-  password: string
-  full_name: string
-  role: 'cashier' | 'inventory_personnel' | 'admin'
-}) {
-  const res = await fetch(`${API_BASE}/staff/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: 'Failed to create account' }))
-    throw new Error(err.message ?? 'Failed to create account')
-  }
-  return res.json()
-}
-
-/**
  * POST /api/staff (Admin only)
  * Provisions a new staff account.
  */
@@ -155,54 +134,16 @@ export async function apiUpdatePassword(password: string) {
  * GET /api/orders (Cashier or Admin)
  */
 export async function apiGetOrders() {
-  try {
-    const headers = await getAuthHeader()
-    const res = await fetch(`${API_BASE}/orders`, {
-      method: 'GET',
-      headers,
-    })
-    if (res.ok) {
-      return await res.json()
-    }
-  } catch (err) {
-    console.warn('Backend /api/orders unreachable, falling back to direct Supabase query:', err)
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/orders`, {
+    method: 'GET',
+    headers,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to fetch orders' }))
+    throw new Error(err.message ?? 'Failed to fetch orders')
   }
-
-  // Resilient fallback: direct Supabase query
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { data: staffProfile } = await supabase
-      .from('staff_profiles')
-      .select('id, role')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    let query = supabase
-      .from('orders')
-      .select('*, order_items(*), cashier:cashier_id(full_name, email)')
-      .order('created_at', { ascending: false })
-      .limit(100)
-
-    if (staffProfile && staffProfile.role === 'cashier') {
-      query = query.eq('cashier_id', staffProfile.id)
-    }
-
-    const { data, error } = await query
-    if (error) {
-      const plainQuery = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .order('created_at', { ascending: false })
-        .limit(100)
-      if (plainQuery.error) throw plainQuery.error
-      return plainQuery.data ?? []
-    }
-    return data ?? []
-  } catch (err: unknown) {
-    throw new Error(err instanceof Error ? err.message : 'Failed to fetch orders')
-  }
+  return res.json()
 }
 
 /**
@@ -226,35 +167,16 @@ export async function apiVoidOrder(orderId: string, reason?: string) {
  * GET /api/inventory/movements (Admin or Inventory Personnel)
  */
 export async function apiGetInventoryMovements() {
-  try {
-    const headers = await getAuthHeader()
-    const res = await fetch(`${API_BASE}/inventory/movements`, {
-      method: 'GET',
-      headers,
-    })
-    if (res.ok) {
-      return await res.json()
-    }
-  } catch (err) {
-    console.warn('Backend /api/inventory/movements unreachable, falling back to direct Supabase query:', err)
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/inventory/movements`, {
+    method: 'GET',
+    headers,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to fetch inventory movements' }))
+    throw new Error(err.message ?? 'Failed to fetch inventory movements')
   }
-
-  const { data, error } = await supabase
-    .from('inventory_movements')
-    .select('*, inventory:inventory_id(name, unit)')
-    .order('created_at', { ascending: false })
-    .limit(150)
-
-  if (error) {
-    const fallback = await supabase
-      .from('inventory_movements')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(150)
-    if (fallback.error) throw new Error(fallback.error.message || 'Failed to fetch inventory movements')
-    return fallback.data ?? []
-  }
-  return data ?? []
+  return res.json()
 }
 
 /**
@@ -286,104 +208,49 @@ export async function apiCreateInventoryItem(payload: {
  * GET /api/products
  */
 export async function apiGetProducts() {
-  try {
-    const headers = await getAuthHeader()
-    const res = await fetch(`${API_BASE}/products`, {
-      method: 'GET',
-      headers,
-    })
-    if (res.ok) {
-      return await res.json()
-    }
-  } catch (err) {
-    console.warn('Backend /api/products unreachable, falling back to direct Supabase query:', err)
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/products`, {
+    method: 'GET',
+    headers,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to fetch products' }))
+    throw new Error(err.message ?? 'Failed to fetch products')
   }
-
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*, category:product_categories(id, name, sort_order), recipes:product_recipes(id, inventory_id, qty_per_unit, inventory:inventory(name, unit, stock_qty))')
-      .order('name')
-
-    if (error) {
-      const basic = await supabase
-        .from('products')
-        .select('*, category:product_categories(id, name, sort_order)')
-        .order('name')
-      if (basic.error) throw basic.error
-      return basic.data ?? []
-    }
-    return data ?? []
-  } catch (err: unknown) {
-    throw new Error(err instanceof Error ? err.message : 'Failed to fetch products')
-  }
+  return res.json()
 }
 
 /**
  * GET /api/products/categories
  */
 export async function apiGetCategories() {
-  try {
-    const headers = await getAuthHeader()
-    const res = await fetch(`${API_BASE}/products/categories`, {
-      method: 'GET',
-      headers,
-    })
-    if (res.ok) {
-      return await res.json()
-    }
-  } catch (err) {
-    console.warn('Backend /api/products/categories unreachable, falling back to direct Supabase query:', err)
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/products/categories`, {
+    method: 'GET',
+    headers,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to fetch categories' }))
+    throw new Error(err.message ?? 'Failed to fetch categories')
   }
-
-  try {
-    const { data, error } = await supabase
-      .from('product_categories')
-      .select('*')
-      .order('sort_order')
-
-    if (error) throw error
-    return data ?? []
-  } catch (err: unknown) {
-    throw new Error(err instanceof Error ? err.message : 'Failed to fetch categories')
-  }
+  return res.json()
 }
 
 /**
  * POST /api/products/categories (Admin only)
  */
 export async function apiCreateCategory(name: string) {
-  try {
-    const headers = await getAuthHeader()
-    const res = await fetch(`${API_BASE}/products/categories`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ name }),
-    })
-    if (res.ok) {
-      return await res.json()
-    }
-  } catch (err) {
-    console.warn('Backend /api/products/categories unreachable, falling back to direct Supabase insert:', err)
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/products/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to create category' }))
+    throw new Error(err.message ?? 'Failed to create category')
   }
-
-  try {
-    const { data: countData } = await supabase
-      .from('product_categories')
-      .select('sort_order', { count: 'exact' })
-
-    const nextOrder = (countData?.length ?? 0) + 1
-    const { data, error } = await supabase
-      .from('product_categories')
-      .insert({ name: name.trim(), sort_order: nextOrder })
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  } catch (err: unknown) {
-    throw new Error(err instanceof Error ? err.message : 'Failed to create category')
-  }
+  return res.json()
 }
 
 /**
@@ -468,64 +335,98 @@ export async function apiDeleteProduct(id: string) {
 }
 
 /**
- * GET /api/shifts/active
+ * POST /api/auth/signup
+ * Registers a new staff account and provisions their profile.
  */
-export async function apiGetActiveShift() {
-  const headers = await getAuthHeader()
-  const res = await fetch(`${API_BASE}/shifts/active`, {
-    method: 'GET',
-    headers,
+export async function apiSignUp(payload: {
+  email: string
+  password: string
+  full_name: string
+  role?: string
+}) {
+  const res = await fetch(`${API_BASE}/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
-  if (!res.ok) return { shift: null }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Sign up failed' }))
+    throw new Error(err.message ?? 'Sign up failed')
+  }
   return res.json()
 }
 
-/**
- * POST /api/shifts/open
- */
-export async function apiOpenShift(payload: { opening_float: number; notes?: string }) {
+
+
+
+// --- PayMongo Sandbox Helpers --------------------------------
+
+/** POST /api/paymongo/create-intent */
+export async function apiCreatePaymentIntent(amountCentavos: number, description?: string) {
   const headers = await getAuthHeader()
-  const res = await fetch(`${API_BASE}/shifts/open`, {
+  const res = await fetch(`${API_BASE}/paymongo/create-intent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify({ amount_centavos: amountCentavos, description }),
+  })
+  if (!res.ok) { const err = await res.json().catch(() => ({ message: 'PayMongo error' })); throw new Error(err.message ?? 'Failed to create payment intent') }
+  return res.json() as Promise<{ payment_intent_id: string; client_key: string }>
+}
+
+/** POST /api/paymongo/create-method */
+export async function apiCreatePaymentMethod(payload: { type: 'card' | 'gcash' | 'paymaya'; billing?: object; details?: object }) {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/paymongo/create-method`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) { const err = await res.json().catch(() => ({ message: 'PayMongo error' })); throw new Error(err.message ?? 'Failed to create payment method') }
+  return res.json() as Promise<{ payment_method_id: string }>
+}
+
+/** POST /api/paymongo/attach-method */
+export async function apiAttachPaymentMethod(payload: { payment_intent_id: string; payment_method_id: string; client_key: string }) {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/paymongo/attach-method`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) { const err = await res.json().catch(() => ({ message: 'PayMongo error' })); throw new Error(err.message ?? 'Failed to attach payment method') }
+  return res.json() as Promise<{
+    status: string
+    next_action?: {
+      type: string
+      redirect?: { url: string; return_url?: string }
+    } | null
+  }>
+}
+
+/** POST /api/paymongo/create-checkout-session */
+export async function apiCreateCheckoutSession(payload: {
+  amount_centavos: number
+  description?: string
+  method_type?: 'gcash' | 'paymaya' | 'card' | 'all'
+  line_items?: Array<{ name: string; amount: number; quantity: number }>
+  success_url?: string
+  cancel_url?: string
+}) {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/paymongo/create-checkout-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: 'Failed to open shift' }))
-    throw new Error(err.message ?? 'Failed to open shift')
+    const err = await res.json().catch(() => ({ message: 'PayMongo error' }))
+    throw new Error(err.message ?? 'Failed to create checkout session')
   }
-  return res.json()
+  return res.json() as Promise<{
+    checkout_session_id: string
+    checkout_url: string
+    client_key?: string
+    sandbox_mock?: boolean
+  }>
 }
-
-/**
- * POST /api/shifts/close
- */
-export async function apiCloseShift(payload: { closing_cash: number; notes?: string }) {
-  const headers = await getAuthHeader()
-  const res = await fetch(`${API_BASE}/shifts/close`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: 'Failed to close shift' }))
-    throw new Error(err.message ?? 'Failed to close shift')
-  }
-  return res.json()
-}
-
-/**
- * GET /api/shifts/history
- */
-export async function apiGetShiftHistory() {
-  const headers = await getAuthHeader()
-  const res = await fetch(`${API_BASE}/shifts/history`, {
-    method: 'GET',
-    headers,
-  })
-  if (!res.ok) return []
-  return res.json()
-}
-
-
 

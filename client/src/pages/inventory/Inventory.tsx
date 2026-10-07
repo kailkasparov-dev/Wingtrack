@@ -47,7 +47,6 @@ export default function Inventory() {
   const [movements, setMovements] = useState<InventoryMovement[]>([])
   const [movementsLoading, setMovementsLoading] = useState(false)
   const [movementsError, setMovementsError] = useState<string | null>(null)
-  const [movementFilter, setMovementFilter] = useState<'all' | 'restock' | 'waste' | 'adjustment' | 'deduction'>('all')
 
   // Add Item modal state
   const [showAddModal, setShowAddModal] = useState(false)
@@ -60,6 +59,10 @@ export default function Inventory() {
   const [newItemSupplier, setNewItemSupplier] = useState('')
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
+
+  // Export state
+  const [exportFilter, setExportFilter] = useState<'week' | 'month'>('week')
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   useEffect(() => {
     if (adjustModal || showAddModal) {
@@ -187,27 +190,69 @@ export default function Inventory() {
     }
   }
 
-  function exportInventoryCSV() {
-    const headers = ['Item Name', 'Category', 'Unit', 'Stock Qty', 'Min Stock Level', 'Unit Cost (PHP)', 'Total Valuation (PHP)', 'Status', 'Supplier']
-    const rows = items.map(item => [
-      `"${item.name.replace(/"/g, '""')}"`,
-      `"${item.category}"`,
-      `"${item.unit}"`,
-      Number(item.stock_qty),
-      Number(item.min_stock_level),
-      Number(item.unit_cost),
-      (Number(item.stock_qty) * Number(item.unit_cost)).toFixed(2),
-      `"${getItemStatus(item).toUpperCase()}"`,
-      `"${(item.supplier ?? '').replace(/"/g, '""')}"`,
-    ])
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `wingtrack-inventory-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  function handleExport(period: 'week' | 'month') {
+    setShowExportMenu(false)
+    const now = new Date()
+    const cutoff = new Date(now)
+    if (period === 'week') {
+      cutoff.setDate(now.getDate() - 7)
+    } else {
+      cutoff.setMonth(now.getMonth() - 1)
+    }
+
+    const filtered = movements.filter(m => new Date(m.created_at) >= cutoff)
+    const periodLabel = period === 'week' ? 'Last 7 Days' : 'Last 30 Days'
+
+    const rows = filtered.map(m => {
+      const dateStr = new Date(m.created_at).toLocaleString('en-PH', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true,
+      })
+      const changeStr = m.qty_change > 0 ? `+${m.qty_change}` : String(m.qty_change)
+      return `
+        <tr>
+          <td>${dateStr}</td>
+          <td>${m.inventory?.name ?? 'Unknown'}</td>
+          <td style="text-transform:capitalize">${m.movement_type}</td>
+          <td style="color:${m.qty_change > 0 ? '#15803d' : '#b91c1c'}">${changeStr} ${m.inventory?.unit ?? ''}</td>
+          <td>${Number(m.qty_before).toFixed(2)} → ${Number(m.qty_after).toFixed(2)}</td>
+          <td>${m.staff?.full_name ?? 'System'}</td>
+          <td>${m.notes || '-'}</td>
+        </tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Inventory Report – ${periodLabel}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    p.meta { color: #666; font-size: 11px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f3f4f6; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb; }
+    td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>WINGTRACK — Inventory Movement Report</h1>
+  <p class="meta">Period: ${periodLabel} &nbsp;|&nbsp; Generated: ${now.toLocaleString('en-PH')} &nbsp;|&nbsp; ${filtered.length} record(s)</p>
+  <table>
+    <thead><tr><th>Timestamp</th><th>Item</th><th>Type</th><th>Change</th><th>Before → After</th><th>Staff</th><th>Notes</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">No records for this period.</td></tr>'}</tbody>
+  </table>
+</body>
+</html>`
+
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.write(html)
+      win.document.close()
+      win.focus()
+      setTimeout(() => win.print(), 400)
+    }
   }
 
   return (
@@ -223,31 +268,7 @@ export default function Inventory() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            id="btn-export-inventory-csv"
-            type="button"
-            className="btn-ghost"
-            onClick={exportInventoryCSV}
-            style={{
-              padding: '9px 14px',
-              fontSize: 13,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              border: '1px solid var(--border)',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export CSV
-          </button>
-
-
-
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <button
             id="btn-add-inventory-item"
             className="btn-primary"
@@ -256,6 +277,64 @@ export default function Inventory() {
           >
             + Add New Item
           </button>
+
+          {/* Export Button */}
+          <div style={{ position: 'relative' }}>
+            <button
+              id="btn-export-inventory"
+              onClick={() => setShowExportMenu(prev => !prev)}
+              style={{
+                padding: '9px 16px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
+                border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+                background: 'var(--card)', color: 'var(--foreground)', cursor: 'pointer',
+                fontWeight: 600, transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--muted)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--card)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+              </svg>
+              Export / Print
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {showExportMenu && (
+              <div
+                style={{
+                  position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+                  background: 'var(--card)', border: '1px solid var(--border)',
+                  borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                  zIndex: 200, minWidth: 200, overflow: 'hidden',
+                }}
+              >
+                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--foreground)' }}>Export Movement Audit</p>
+                  <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>Opens a printable report</p>
+                </div>
+                {[{ label: '📅 Last 7 Days (Week)', value: 'week' as const }, { label: '📆 Last 30 Days (Month)', value: 'month' as const }].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setExportFilter(opt.value); handleExport(opt.value) }}
+                    style={{
+                      width: '100%', padding: '11px 14px', background: exportFilter === opt.value ? 'rgba(234,88,12,0.07)' : 'transparent',
+                      border: 'none', textAlign: 'left', fontSize: 13, cursor: 'pointer',
+                      color: exportFilter === opt.value ? 'var(--primary)' : 'var(--foreground)',
+                      fontWeight: exportFilter === opt.value ? 600 : 400,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--muted)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = exportFilter === opt.value ? 'rgba(234,88,12,0.07)' : 'transparent' }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -466,7 +545,7 @@ export default function Inventory() {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 75px 95px 95px 105px 135px 85px 175px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
                 {['Item Name', 'Unit', 'In Stock', 'Min Level', 'Unit Cost', 'Supplier', 'Status', 'Actions'].map(h => (
                   <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
@@ -479,7 +558,7 @@ export default function Inventory() {
                   <div
                     key={item.id}
                     style={{
-                      display: 'grid', gridTemplateColumns: '2fr 75px 95px 95px 105px 135px 85px 175px', gap: 0,
+                      display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0,
                       padding: '14px 22px', borderBottom: i < filtered.length - 1 ? '1px solid var(--muted)' : 'none',
                       alignItems: 'center', transition: 'background 0.1s',
                     }}
@@ -496,21 +575,11 @@ export default function Inventory() {
                     <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)' }}>&#8369;{Number(item.unit_cost).toLocaleString()}</span>
                     <span style={{ fontSize: 12, color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.supplier ?? '-'}</span>
                     <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 700, background: s.bg, color: s.color, textAlign: 'center', display: 'inline-block' }}>{s.label}</span>
-                    <div style={{ display: 'flex', gap: 5 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         id={`inv-restock-${item.id}`}
-                        title="Manual stock adjustment"
-                        onClick={() => { setAdjustModal({ item, type: 'adjustment' }); setAdjustQty(''); setAdjustNotes('') }}
-                        style={{
-                          fontSize: 11,
-                          padding: '4px 8px',
-                          borderRadius: 5,
-                          border: '1px solid var(--border)',
-                          background: 'var(--card)',
-                          color: 'var(--muted-foreground)',
-                          cursor: 'pointer',
-                          fontWeight: 500,
-                        }}
+                        onClick={() => { setAdjustModal({ item, type: 'restock' }); setAdjustQty(''); setAdjustNotes('') }}
+                        style={{ fontSize: 12, padding: '5px 11px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
                       >
                         Adjust
                       </button>
@@ -527,32 +596,6 @@ export default function Inventory() {
       ) : (
         /* Movements Audit Table */
         <div>
-          {/* Movement Type Filter Bar */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Filter Type:
-            </span>
-            {(['all', 'restock', 'waste', 'deduction', 'adjustment'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setMovementFilter(t)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  border: '1px solid var(--border)',
-                  background: movementFilter === t ? 'var(--primary)' : 'var(--card)',
-                  color: movementFilter === t ? '#ffffff' : 'var(--foreground)',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {t === 'all' ? 'All Movements' : t === 'waste' ? 'Waste / Spoilage' : t === 'deduction' ? 'POS Deductions' : t}
-              </button>
-            ))}
-          </div>
-
           {movementsLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}>
               <div className="spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
@@ -563,14 +606,12 @@ export default function Inventory() {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '150px 200px 120px 100px 140px 140px 1fr', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
                 {['Timestamp', 'Item', 'Type', 'Change', 'Before → After', 'Staff', 'Notes'].map(h => (
                   <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
               </div>
-              {movements
-                .filter(m => movementFilter === 'all' || m.movement_type === movementFilter)
-                .map((m, i, arr) => {
+              {movements.map((m, i) => {
                 const dateStr = new Date(m.created_at).toLocaleString('en-PH', {
                   month: 'short',
                   day: 'numeric',
@@ -586,8 +627,8 @@ export default function Inventory() {
                   <div
                     key={m.id}
                     style={{
-                      display: 'grid', gridTemplateColumns: '150px 200px 120px 100px 140px 140px 1fr', gap: 0,
-                      padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid var(--muted)' : 'none',
+                      display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0,
+                      padding: '12px 20px', borderBottom: i < movements.length - 1 ? '1px solid var(--muted)' : 'none',
                       alignItems: 'center', fontSize: 13,
                     }}
                   >
@@ -667,6 +708,18 @@ export default function Inventory() {
                 <label htmlFor="adj-notes" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>Notes (optional)</label>
                 <input id="adj-notes" className="input" type="text" placeholder="e.g. Delivery from supplier" value={adjustNotes} onChange={e => setAdjustNotes(e.target.value)} style={{ padding: '11px 14px', fontSize: 14 }} />
               </div>
+              {adjustModal.type === 'restock' && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'rgba(21,128,61,0.07)', border: '1px solid rgba(21,128,61,0.2)', borderRadius: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p style={{ fontSize: 12, color: '#15803d', lineHeight: 1.5 }}>
+                    <strong>FIFO Active:</strong> Remaining old stock will be dispensed first before new stock is consumed. New quantity is added on top of the current balance.
+                  </p>
+                </div>
+              )}
               {adjustError && (
                 <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#b91c1c' }}>{adjustError}</div>
               )}

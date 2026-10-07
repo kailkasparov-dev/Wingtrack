@@ -1,71 +1,103 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { apiRegisterStaff } from '@/lib/api'
-import type { StaffRole } from '@/types'
 
-const ROLES: { value: StaffRole; label: string }[] = [
-  { value: 'cashier',             label: 'Cashier' },
-  { value: 'admin',               label: 'Admin / Manager' },
-  { value: 'inventory_personnel', label: 'Inventory Personnel' },
-]
+interface LoginPageProps {
+  onSwitchToSignUp?: () => void
+  onForgotPassword?: () => void
+}
 
-export default function LoginPage() {
-  const { signIn } = useAuth()
+// Cloudflare Turnstile site key from env (falls back to test key)
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'
 
-  // Mode: 'signin' or 'signup'
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (el: HTMLElement, opts: object) => string
+      reset: (id: string) => void
+      remove: (id: string) => void
+    }
+  }
+}
 
-  // Sign In state
+export default function LoginPage({ onSwitchToSignUp, onForgotPassword }: LoginPageProps) {
+  const { signIn, signInWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
-  // Sign Up state (Add Staff Member)
-  const [signUpForm, setSignUpForm] = useState({
-    full_name: '',
-    email: '',
-    password: '',
-    role: 'cashier' as StaffRole,
-  })
-  const [showSignUpPassword, setShowSignUpPassword] = useState(false)
-  const [signUpLoading, setSignUpLoading] = useState(false)
-  const [signUpError, setSignUpError] = useState<string | null>(null)
-  const [signUpSuccess, setSignUpSuccess] = useState<string | null>(null)
+  // Turnstile
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileReady, setTurnstileReady] = useState(false)
 
-  async function handleSignIn(e: React.FormEvent) {
+  useEffect(() => {
+    // Load Turnstile script
+    if (document.getElementById('cf-turnstile-script')) {
+      setTurnstileReady(true)
+      return
+    }
+    const script = document.createElement('script')
+    script.id = 'cf-turnstile-script'
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+    script.async = true
+    script.defer = true
+    script.onload = () => setTurnstileReady(true)
+    document.head.appendChild(script)
+  }, [])
+
+  useEffect(() => {
+    if (!turnstileReady || !turnstileRef.current || !window.turnstile) return
+    if (widgetIdRef.current) return // already rendered
+
+    widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (token: string) => setTurnstileToken(token),
+      'expired-callback': () => setTurnstileToken(null),
+      'error-callback': () => setTurnstileToken(null),
+      theme: 'light',
+      size: 'normal',
+    })
+  }, [turnstileReady])
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Access Denied: Internet is not connected.')
+      return
+    }
+    if (!turnstileToken) {
+      setError('Please complete the security check.')
+      return
+    }
     setError(null)
     setLoading(true)
     try {
       await signIn(email, password)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
+      const msg = err instanceof Error ? err.message : 'Login failed. Please try again.'
+      setError(msg)
+      // Reset Turnstile on error
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current)
+        setTurnstileToken(null)
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleSignUp(e: React.FormEvent) {
-    e.preventDefault()
-    setSignUpError(null)
-    setSignUpSuccess(null)
-    setSignUpLoading(true)
-
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true)
+    setError(null)
     try {
-      if (signUpForm.password.length < 8) {
-        throw new Error('Password must be at least 8 characters long.')
-      }
-
-      await apiRegisterStaff(signUpForm)
-      setSignUpSuccess('Account created! Signing you in...')
-
-      // Automatically sign in the newly registered staff
-      await signIn(signUpForm.email, signUpForm.password)
+      await signInWithGoogle()
     } catch (err: unknown) {
-      setSignUpError(err instanceof Error ? err.message : 'Failed to create account. Please try again.')
-      setSignUpLoading(false)
+      setError(err instanceof Error ? err.message : 'Google sign-in failed.')
+      setGoogleLoading(false)
     }
   }
 
@@ -73,479 +105,218 @@ export default function LoginPage() {
     <div
       style={{
         minHeight: '100vh',
-        width: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--background)',
-        padding: '16px 12px',
-        overflowY: 'auto',
-        boxSizing: 'border-box',
+        background: '#FFC8A7',
+        padding: '24px 16px',
       }}
     >
-      <div className="fade-in" style={{ width: '100%', maxWidth: 440, margin: 'auto' }}>
-        {/* Compact Logo Header */}
-        <div style={{ textAlign: 'center', marginBottom: 14 }}>
+      <div className="fade-in" style={{ width: '100%', maxWidth: 520 }}>
+        {/* Logo Header */}
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div
             style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              overflow: 'hidden',
-              margin: '0 auto 8px',
-              boxShadow: '0 6px 18px rgba(234,88,12,0.25)',
-              border: '2px solid rgba(249,115,22,0.4)',
-              background: '#ea580c',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: 88, height: 88, borderRadius: '50%', overflow: 'hidden',
+              margin: '0 auto 18px', boxShadow: '0 10px 28px rgba(154,52,18,0.3)',
+              border: '3px solid rgba(255,255,255,0.8)', background: '#ea580c',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <img
-              src="/logo.png"
-              alt="Wingtrack Logo"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
+            <img src="/logo.png" alt="Wingtrack Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
-          <h1
-            style={{
-              fontFamily: 'Fraunces',
-              fontSize: 26,
-              fontWeight: 700,
-              color: 'var(--foreground)',
-              lineHeight: 1.1,
-              margin: 0,
-            }}
-          >
-            <span style={{ color: 'var(--accent)' }}>WING</span>TRACK
+          <h1 style={{ fontFamily: 'Fraunces', fontSize: 36, fontWeight: 700, color: '#1c1917', lineHeight: 1.15 }}>
+            <span style={{ color: '#c2410c' }}>WING</span>TRACK
           </h1>
-          <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 3, fontWeight: 500 }}>
+          <p style={{ fontSize: 14, color: '#431407', marginTop: 8, fontWeight: 600 }}>
             Wingtrack — Staff Portal
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div
+        {/* Form Card */}
+        <form
+          onSubmit={handleSubmit}
+          className="card"
           style={{
-            display: 'flex',
-            background: 'rgba(0, 0, 0, 0.04)',
-            padding: 3,
-            borderRadius: 10,
-            marginBottom: 12,
-            border: '1px solid var(--border)',
+            background: '#ffffff', padding: '40px 36px',
+            display: 'flex', flexDirection: 'column', gap: 20,
+            borderRadius: 16, boxShadow: '0 16px 40px rgba(124,45,18,0.15)',
           }}
         >
+          {/* Google Sign-In */}
           <button
+            id="login-google"
             type="button"
-            onClick={() => { setMode('signin'); setError(null) }}
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
             style={{
-              flex: 1,
-              padding: '7px 12px',
-              borderRadius: 7,
-              border: 'none',
-              background: mode === 'signin' ? '#ffffff' : 'transparent',
-              color: mode === 'signin' ? 'var(--foreground)' : 'var(--muted-foreground)',
-              fontWeight: 600,
-              fontSize: 13,
-              cursor: 'pointer',
-              boxShadow: mode === 'signin' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.15s ease',
+              width: '100%', padding: '13px 16px', borderRadius: 10,
+              border: '1.5px solid var(--border)', background: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              fontSize: 15, fontWeight: 600, color: '#1c1917', cursor: 'pointer',
+              transition: 'all 0.15s', fontFamily: 'DM Sans',
             }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f9fafb'; (e.currentTarget as HTMLElement).style.borderColor = '#d1d5db' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
           >
-            Sign In
+            {googleLoading ? (
+              <span className="spinner" style={{ width: 18, height: 18 }} />
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+            )}
+            Continue with Google
           </button>
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); setSignUpError(null) }}
-            style={{
-              flex: 1,
-              padding: '7px 12px',
-              borderRadius: 7,
-              border: 'none',
-              background: mode === 'signup' ? '#ffffff' : 'transparent',
-              color: mode === 'signup' ? 'var(--foreground)' : 'var(--muted-foreground)',
-              fontWeight: 600,
-              fontSize: 13,
-              cursor: 'pointer',
-              boxShadow: mode === 'signup' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            Sign Up
-          </button>
-        </div>
 
-        {/* SIGN IN FORM */}
-        {mode === 'signin' ? (
-          <form
-            onSubmit={handleSignIn}
-            className="card"
-            style={{
-              padding: '24px 26px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 15,
-              boxShadow: '0 8px 24px rgba(74, 46, 18, 0.06)',
-              borderRadius: 12,
-            }}
-          >
-            <div>
-              <label
-                htmlFor="login-email"
-                style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 5 }}
-              >
-                Email Address
-              </label>
-              <input
-                id="login-email"
-                className="input"
-                type="email"
-                autoComplete="email"
-                required
-                placeholder="you@wingtrack.ph"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13.5 }}
-              />
-            </div>
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 12, color: 'var(--muted-foreground)', fontWeight: 500 }}>or sign in with email</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
 
-            <div>
-              <label
-                htmlFor="login-password"
-                style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 5 }}
-              >
+          {/* Email */}
+          <div>
+            <label htmlFor="login-email" style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--foreground)', marginBottom: 8 }}>
+              Email Address
+            </label>
+            <input
+              id="login-email"
+              className="input"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="you@wingtrack.ph"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={{ width: '100%', padding: '14px 16px', fontSize: 15 }}
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <label htmlFor="login-password" style={{ fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>
                 Password
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="login-password"
-                  className="input"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  style={{ width: '100%', padding: '10px 38px 10px 12px', fontSize: 13.5 }}
-                />
+              {onForgotPassword && (
                 <button
                   type="button"
-                  id="toggle-login-password"
-                  onClick={() => setShowPassword(prev => !prev)}
+                  id="forgot-password-link"
+                  onClick={onForgotPassword}
                   style={{
-                    position: 'absolute',
-                    right: 8,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--muted-foreground)',
-                    borderRadius: 4,
+                    background: 'none', border: 'none', color: 'var(--primary)',
+                    fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0,
                   }}
-                  title={showPassword ? 'Hide password' : 'Show password'}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
+                  Forgot password?
                 </button>
-              </div>
-            </div>
-
-            {error && (
-              <div
-                style={{
-                  background: 'var(--danger-bg)',
-                  border: '1px solid #fca5a5',
-                  borderRadius: 6,
-                  padding: '9px 12px',
-                  fontSize: 12.5,
-                  color: 'var(--danger)',
-                  fontWeight: 500,
-                  lineHeight: 1.4,
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 1 }}>Sign In Error</div>
-                <div>{error}</div>
-              </div>
-            )}
-
-            <button
-              id="login-submit"
-              type="submit"
-              className="btn-primary"
-              disabled={loading}
-              style={{ marginTop: 2, padding: '12px', fontSize: 14, fontWeight: 600, borderRadius: 8 }}
-            >
-              {loading ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <span className="spinner" style={{ width: 15, height: 15 }} />
-                  Signing in...
-                </span>
-              ) : (
-                'Sign In'
               )}
-            </button>
-
-            <div style={{ textAlign: 'center', marginTop: 2 }}>
-              <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>Need an account? </span>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input
+                id="login-password"
+                className="input"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                style={{ width: '100%', padding: '14px 46px 14px 16px', fontSize: 15 }}
+              />
               <button
                 type="button"
-                onClick={() => { setMode('signup'); setSignUpError(null) }}
+                id="toggle-login-password"
+                onClick={() => setShowPassword(prev => !prev)}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: 0,
-                  textDecoration: 'underline',
+                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--muted-foreground)', borderRadius: 6,
                 }}
+                title={showPassword ? 'Hide password' : 'Show password'}
               >
-                Sign Up as Staff
+                {showPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
               </button>
             </div>
-          </form>
-        ) : (
-          /* SIGN UP / ADD STAFF MEMBER FORM — Exact replica of user specification */
-          <div
-            className="card"
-            style={{
-              padding: '22px 24px',
-              boxShadow: '0 8px 24px rgba(74, 46, 18, 0.06)',
-              borderRadius: 12,
-            }}
-          >
-            <h2
+          </div>
+
+          {/* Turnstile widget */}
+          <div>
+            <div ref={turnstileRef} />
+            {!turnstileReady && (
+              <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>Loading security check...</div>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div
               style={{
-                fontFamily: 'Fraunces',
-                fontSize: 19,
-                fontWeight: 700,
-                color: 'var(--foreground)',
-                marginBottom: 14,
+                background: 'var(--danger-bg)', border: '1px solid #fca5a5',
+                borderRadius: 8, padding: '12px 16px', fontSize: 14,
+                color: 'var(--danger)', fontWeight: 500, lineHeight: 1.45,
               }}
             >
-              Add Staff Member
-            </h2>
+              <div style={{ fontWeight: 600, marginBottom: 3 }}>Sign In Error</div>
+              <div>{error}</div>
+            </div>
+          )}
 
-            <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Full Name */}
-              <div>
-                <label
-                  htmlFor="signup-name"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}
-                >
-                  Full Name
-                </label>
-                <input
-                  id="signup-name"
-                  autoFocus
-                  className="input"
-                  type="text"
-                  required
-                  placeholder="Maria Santos"
-                  value={signUpForm.full_name}
-                  onChange={e => setSignUpForm(f => ({ ...f, full_name: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px', fontSize: 13.5 }}
-                />
-              </div>
+          {/* Submit */}
+          <button
+            id="login-submit"
+            type="submit"
+            className="btn-primary"
+            disabled={loading || !turnstileToken}
+            style={{ marginTop: 4, padding: '15px', fontSize: 16, fontWeight: 600, borderRadius: 10 }}
+          >
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <span className="spinner" style={{ width: 18, height: 18 }} />
+                Signing in...
+              </span>
+            ) : 'Sign In'}
+          </button>
 
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="signup-email"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}
-                >
-                  Email
-                </label>
-                <input
-                  id="signup-email"
-                  className="input"
-                  type="email"
-                  required
-                  placeholder="maria@wingtrack.ph"
-                  value={signUpForm.email}
-                  onChange={e => setSignUpForm(f => ({ ...f, email: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px', fontSize: 13.5 }}
-                />
-              </div>
+          {/* Switch to Sign Up */}
+          {onSwitchToSignUp && (
+            <div style={{ textAlign: 'center', marginTop: 2 }}>
+              <span style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>Don't have an account? </span>
+              <button
+                type="button"
+                id="switch-to-signup-btn"
+                onClick={onSwitchToSignUp}
+                style={{
+                  background: 'none', border: 'none', color: 'var(--accent)',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer', textDecoration: 'underline', padding: 0,
+                }}
+              >
+                Sign up here
+              </button>
+            </div>
+          )}
 
-              {/* Temporary Password */}
-              <div>
-                <label
-                  htmlFor="signup-password"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}
-                >
-                  Temporary Password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    id="signup-password"
-                    className="input"
-                    type={showSignUpPassword ? 'text' : 'password'}
-                    required
-                    minLength={8}
-                    placeholder="Min. 8 characters"
-                    value={signUpForm.password}
-                    onChange={e => setSignUpForm(f => ({ ...f, password: e.target.value }))}
-                    style={{ width: '100%', padding: '9px 36px 9px 12px', fontSize: 13.5 }}
-                  />
-                  <button
-                    type="button"
-                    id="toggle-signup-password"
-                    onClick={() => setShowSignUpPassword(prev => !prev)}
-                    style={{
-                      position: 'absolute',
-                      right: 8,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 4,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--muted-foreground)',
-                      borderRadius: 4,
-                    }}
-                    title={showSignUpPassword ? 'Hide password' : 'Show password'}
-                    aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showSignUpPassword ? (
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Role */}
-              <div>
-                <label
-                  htmlFor="signup-role"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}
-                >
-                  Role
-                </label>
-                <select
-                  id="signup-role"
-                  className="input"
-                  value={signUpForm.role}
-                  onChange={e => setSignUpForm(f => ({ ...f, role: e.target.value as StaffRole }))}
-                  style={{ width: '100%', padding: '9px 12px', fontSize: 13.5 }}
-                >
-                  {ROLES.map(r => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {signUpError && (
-                <div
-                  style={{
-                    background: 'var(--danger-bg)',
-                    border: '1px solid #fca5a5',
-                    borderRadius: 6,
-                    padding: '8px 12px',
-                    fontSize: 12,
-                    color: 'var(--danger)',
-                    fontWeight: 500,
-                  }}
-                >
-                  {signUpError}
-                </div>
-              )}
-
-              {signUpSuccess && (
-                <div
-                  style={{
-                    background: 'rgba(21,128,61,0.1)',
-                    border: '1px solid #86efac',
-                    borderRadius: 6,
-                    padding: '8px 12px',
-                    fontSize: 12,
-                    color: '#15803d',
-                    fontWeight: 500,
-                  }}
-                >
-                  {signUpSuccess}
-                </div>
-              )}
-
-              {/* Action Buttons: Cancel and Create Account */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => { setMode('signin'); setSignUpError(null) }}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    fontSize: 13.5,
-                    fontWeight: 500,
-                    border: '1px solid var(--border)',
-                    borderRadius: 7,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  id="btn-create-staff"
-                  type="submit"
-                  className="btn-primary"
-                  disabled={signUpLoading}
-                  style={{
-                    flex: 1.5,
-                    padding: '10px',
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    borderRadius: 7,
-                    background: '#ea580c',
-                    color: '#ffffff',
-                    border: 'none',
-                    cursor: signUpLoading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {signUpLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <span className="spinner" style={{ width: 13, height: 13 }} />
-                      Creating...
-                    </span>
-                  ) : (
-                    'Create Account'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+          <p style={{ fontSize: 12, color: 'var(--muted-foreground)', textAlign: 'center', lineHeight: 1.5 }}>
+            Need help? Contact your store administrator.
+          </p>
+        </form>
       </div>
     </div>
   )
 }
-
-
