@@ -224,24 +224,51 @@ export default function Inventory() {
     const html = `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8" />
   <title>Inventory Report – ${periodLabel}</title>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
-    h1 { font-size: 20px; margin-bottom: 4px; }
-    p.meta { color: #666; font-size: 11px; margin-bottom: 16px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #f3f4f6; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb; }
-    td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; color: #1c1917; padding: 24px 32px; background: #fff; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid #e7e5e4; }
+    .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #44403c; background: #f5f5f4; border: 1px solid #d6d3d1; border-radius: 8px; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+    .btn-back:hover { background: #e7e5e4; }
+    .btn-print { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; font-size: 13px; font-weight: 600; color: #fff; background: #ea580c; border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.15s; }
+    .btn-print:hover { opacity: 0.9; }
+    h1 { font-size: 22px; font-weight: 700; color: #1c1917; margin: 0 0 4px 0; }
+    p.meta { color: #78716c; font-size: 12px; margin: 0 0 20px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th { background: #f5f5f4; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #57534e; border-bottom: 2px solid #e7e5e4; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f5f5f4; vertical-align: top; font-size: 13px; }
     tr:last-child td { border-bottom: none; }
-    @media print { body { padding: 0; } }
+    @media print {
+      .no-print { display: none !important; }
+      body { padding: 0; }
+    }
   </style>
 </head>
 <body>
+  <div class="no-print top-bar">
+    <button class="btn-back" onclick="if (window.opener) { window.opener.focus(); window.close(); } else { window.close(); }">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Back to Inventory
+    </button>
+    <button class="btn-print" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+      </svg>
+      Print Report
+    </button>
+  </div>
+
   <h1>WINGTRACK — Inventory Movement Report</h1>
   <p class="meta">Period: ${periodLabel} &nbsp;|&nbsp; Generated: ${now.toLocaleString('en-PH')} &nbsp;|&nbsp; ${filtered.length} record(s)</p>
   <table>
     <thead><tr><th>Timestamp</th><th>Item</th><th>Type</th><th>Change</th><th>Before → After</th><th>Staff</th><th>Notes</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px">No records for this period.</td></tr>'}</tbody>
+    <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:#888;padding:24px">No records for this period.</td></tr>'}</tbody>
   </table>
 </body>
 </html>`
