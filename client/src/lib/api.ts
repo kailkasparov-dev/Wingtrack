@@ -430,3 +430,34 @@ export async function apiCreateCheckoutSession(payload: {
   }>
 }
 
+// --- Cashier Shifts --------------------------------
+
+/** POST /api/shifts/open */
+export async function apiOpenShift(payload: { opening_float: number; notes?: string }) {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/shifts/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to open shift' }))
+    throw new Error(err.message ?? 'Failed to open shift')
+  }
+  return res.json()
+}
+
+/** POST /api/shifts/close */
+export async function apiCloseShift(payload: { closing_cash: number; notes?: string }) {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${API_BASE}/shifts/close`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to close shift' }))
+    throw new Error(err.message ?? 'Failed to close shift')
+  }
+  return res.json()
+}

@@ -11,6 +11,7 @@ import ordersRouter    from './routes/orders'
 import productsRouter  from './routes/products'
 import authRouter      from './routes/auth'
 import paymongoRouter  from './routes/paymongo'
+import shiftsRouter    from './routes/shifts'
 
 const app  = express()
 const PORT = Number(process.env.PORT ?? 4000)
@@ -37,6 +38,7 @@ app.use('/api/inventory', inventoryRouter)
 app.use('/api/staff',     staffRouter)
 app.use('/api/orders',    ordersRouter)
 app.use('/api/products',  productsRouter)
+app.use('/api/shifts',    shiftsRouter)
 app.use('/api/paymongo',  paymongoRouter)  // Sandbox only
 
 // ── 404 catch-all ────────────────────────────────────────────
