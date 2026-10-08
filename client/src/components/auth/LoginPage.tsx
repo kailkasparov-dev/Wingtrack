@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 interface LoginPageProps {
   onSwitchToSignUp?: () => void
   onForgotPassword?: () => void
+  onOtpSent?: (email: string) => void  // callback when OTP is sent successfully
 }
 
 // Cloudflare Turnstile site key from env (falls back to test key)
@@ -19,14 +20,16 @@ declare global {
   }
 }
 
-export default function LoginPage({ onSwitchToSignUp, onForgotPassword }: LoginPageProps) {
-  const { signIn, signInWithGoogle } = useAuth()
+export default function LoginPage({ onSwitchToSignUp, onForgotPassword, onOtpSent }: LoginPageProps) {
+  const { signIn, signInWithGoogle, sendLoginOtp } = useAuth()
+  const [tab, setTab] = useState<'password' | 'otp'>('password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
 
   // Turnstile
   const turnstileRef = useRef<HTMLDivElement>(null)
@@ -101,6 +104,38 @@ export default function LoginPage({ onSwitchToSignUp, onForgotPassword }: LoginP
     }
   }
 
+  async function handleSendOtp(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) { setError('Please enter your email address.'); return }
+    setError(null); setLoading(true)
+    try {
+      await sendLoginOtp(email)
+      setOtpSent(true)
+      if (onOtpSent) onOtpSent(email)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send OTP.'
+      const lower = msg.toLowerCase()
+      if (lower.includes('user not found') || lower.includes('no user')) {
+        setError('No account found with that email. Please sign up first.')
+      } else if (lower.includes('signups not allowed') || lower.includes('signup not allowed')) {
+        setError('Passwordless login is not enabled for this app. Please sign in with your password instead, or contact your administrator.')
+      } else if (lower.includes('rate limit')) {
+        setError('Too many requests. Please wait a moment before trying again.')
+      } else {
+        setError(msg)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1, padding: '10px', fontSize: 14, fontWeight: 600,
+    border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
+    background: active ? 'var(--primary)' : 'transparent',
+    color: active ? '#fff' : 'var(--muted-foreground)',
+  })
+
   return (
     <div
       style={{
@@ -134,8 +169,7 @@ export default function LoginPage({ onSwitchToSignUp, onForgotPassword }: LoginP
         </div>
 
         {/* Form Card */}
-        <form
-          onSubmit={handleSubmit}
+        <div
           className="card"
           style={{
             background: '#ffffff', padding: '40px 36px',
@@ -179,120 +213,212 @@ export default function LoginPage({ onSwitchToSignUp, onForgotPassword }: LoginP
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
-          {/* Email */}
-          <div>
-            <label htmlFor="login-email" style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--foreground)', marginBottom: 8 }}>
-              Email Address
-            </label>
-            <input
-              id="login-email"
-              className="input"
-              type="email"
-              autoComplete="email"
-              required
-              placeholder="you@wingtrack.ph"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{ width: '100%', padding: '14px 16px', fontSize: 15 }}
-            />
+          {/* Tab switcher */}
+          <div style={{ display: 'flex', gap: 6, background: 'var(--muted)', padding: 4, borderRadius: 10 }}>
+            <button id="tab-password" type="button" style={tabStyle(tab === 'password')} onClick={() => { setTab('password'); setError(null); setOtpSent(false) }}>
+              Password
+            </button>
+            <button id="tab-otp" type="button" style={tabStyle(tab === 'otp')} onClick={() => { setTab('otp'); setError(null); setOtpSent(false) }}>
+              Email OTP
+            </button>
           </div>
 
-          {/* Password */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <label htmlFor="login-password" style={{ fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>
-                Password
-              </label>
-              {onForgotPassword && (
-                <button
-                  type="button"
-                  id="forgot-password-link"
-                  onClick={onForgotPassword}
+          {/* ── PASSWORD TAB ── */}
+          {tab === 'password' && (
+            <form onSubmit={handleSubmit} style={{ display: 'contents' }}>
+              {/* Email */}
+              <div>
+                <label htmlFor="login-email" style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--foreground)', marginBottom: 8 }}>
+                  Email Address
+                </label>
+                <input
+                  id="login-email"
+                  className="input"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="you@wingtrack.ph"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px', fontSize: 15 }}
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label htmlFor="login-password" style={{ fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>
+                    Password
+                  </label>
+                  {onForgotPassword && (
+                    <button
+                      type="button"
+                      id="forgot-password-link"
+                      onClick={onForgotPassword}
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--primary)',
+                        fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0,
+                      }}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="login-password"
+                    className="input"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    style={{ width: '100%', padding: '14px 46px 14px 16px', fontSize: 15 }}
+                  />
+                  <button
+                    type="button"
+                    id="toggle-login-password"
+                    onClick={() => setShowPassword(prev => !prev)}
+                    style={{
+                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'var(--muted-foreground)', borderRadius: 6,
+                    }}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Turnstile widget */}
+              <div>
+                <div ref={turnstileRef} />
+                {!turnstileReady && (
+                  <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>Loading security check...</div>
+                )}
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div
                   style={{
-                    background: 'none', border: 'none', color: 'var(--primary)',
-                    fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0,
+                    background: 'var(--danger-bg)', border: '1px solid #fca5a5',
+                    borderRadius: 8, padding: '12px 16px', fontSize: 14,
+                    color: 'var(--danger)', fontWeight: 500, lineHeight: 1.45,
                   }}
                 >
-                  Forgot password?
-                </button>
+                  <div style={{ fontWeight: 600, marginBottom: 3 }}>Sign In Error</div>
+                  <div>{error}</div>
+                </div>
               )}
-            </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="login-password"
-                className="input"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                style={{ width: '100%', padding: '14px 46px 14px 16px', fontSize: 15 }}
-              />
+
+              {/* Submit */}
               <button
-                type="button"
-                id="toggle-login-password"
-                onClick={() => setShowPassword(prev => !prev)}
-                style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--muted-foreground)', borderRadius: 6,
-                }}
-                title={showPassword ? 'Hide password' : 'Show password'}
+                id="login-submit"
+                type="submit"
+                className="btn-primary"
+                disabled={loading || !turnstileToken}
+                style={{ marginTop: 4, padding: '15px', fontSize: 16, fontWeight: 600, borderRadius: 10 }}
               >
-                {showPassword ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                )}
+                {loading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                    <span className="spinner" style={{ width: 18, height: 18 }} />
+                    Signing in...
+                  </span>
+                ) : 'Sign In'}
               </button>
-            </div>
-          </div>
-
-          {/* Turnstile widget */}
-          <div>
-            <div ref={turnstileRef} />
-            {!turnstileReady && (
-              <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>Loading security check...</div>
-            )}
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div
-              style={{
-                background: 'var(--danger-bg)', border: '1px solid #fca5a5',
-                borderRadius: 8, padding: '12px 16px', fontSize: 14,
-                color: 'var(--danger)', fontWeight: 500, lineHeight: 1.45,
-              }}
-            >
-              <div style={{ fontWeight: 600, marginBottom: 3 }}>Sign In Error</div>
-              <div>{error}</div>
-            </div>
+            </form>
           )}
 
-          {/* Submit */}
-          <button
-            id="login-submit"
-            type="submit"
-            className="btn-primary"
-            disabled={loading || !turnstileToken}
-            style={{ marginTop: 4, padding: '15px', fontSize: 16, fontWeight: 600, borderRadius: 10 }}
-          >
-            {loading ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <span className="spinner" style={{ width: 18, height: 18 }} />
-                Signing in...
-              </span>
-            ) : 'Sign In'}
-          </button>
+          {/* ── OTP TAB ── */}
+          {tab === 'otp' && (
+            <form onSubmit={handleSendOtp} style={{ display: 'contents' }}>
+              {otpSent ? (
+                /* Sent confirmation banner */
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '18px 20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📬</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#15803d', marginBottom: 6 }}>Code sent!</div>
+                  <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+                    A 6-digit login code was sent to <strong>{email}</strong>.<br />
+                    Check your inbox (and spam folder) and enter it on the next screen.
+                  </p>
+                  <button
+                    id="otp-resend-login"
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setOtpSent(false)}
+                    style={{ marginTop: 14, padding: '10px 24px', fontSize: 13, borderRadius: 8 }}
+                  >
+                    Use a different email
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="otp-email" style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--foreground)', marginBottom: 8 }}>
+                      Email Address
+                    </label>
+                    <input
+                      id="otp-email"
+                      className="input"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      placeholder="you@wingtrack.ph"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      style={{ width: '100%', padding: '14px 16px', fontSize: 15 }}
+                    />
+                    <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 6 }}>
+                      We'll send a one-time 6-digit code to this email. No password needed.
+                    </p>
+                  </div>
+
+                  {/* Error */}
+                  {error && (
+                    <div
+                      style={{
+                        background: 'var(--danger-bg)', border: '1px solid #fca5a5',
+                        borderRadius: 8, padding: '12px 16px', fontSize: 14,
+                        color: 'var(--danger)', fontWeight: 500, lineHeight: 1.45,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: 3 }}>Error</div>
+                      <div>{error}</div>
+                    </div>
+                  )}
+
+                  <button
+                    id="otp-send-btn"
+                    type="submit"
+                    className="btn-primary"
+                    disabled={loading}
+                    style={{ marginTop: 4, padding: '15px', fontSize: 16, fontWeight: 600, borderRadius: 10 }}
+                  >
+                    {loading ? (
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <span className="spinner" style={{ width: 18, height: 18 }} />
+                        Sending Code...
+                      </span>
+                    ) : 'Send Login Code'}
+                  </button>
+                </>
+              )}
+            </form>
+          )}
 
           {/* Switch to Sign Up */}
           {onSwitchToSignUp && (
@@ -315,7 +441,7 @@ export default function LoginPage({ onSwitchToSignUp, onForgotPassword }: LoginP
           <p style={{ fontSize: 12, color: 'var(--muted-foreground)', textAlign: 'center', lineHeight: 1.5 }}>
             Need help? Contact your store administrator.
           </p>
-        </form>
+        </div>
       </div>
     </div>
   )

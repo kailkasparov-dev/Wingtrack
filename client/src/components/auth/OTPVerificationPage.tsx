@@ -5,9 +5,10 @@ interface OTPVerificationPageProps {
   email: string
   onVerified: () => void
   onBack: () => void
+  type?: 'signup' | 'magiclink'  // default: signup
 }
 
-const OTP_EXPIRY_SECONDS = 300 // 5 minutes — must match Supabase OTP expiry setting
+const OTP_EXPIRY_SECONDS = 300 // 5 minutes — must match Supabase "Email OTP expiration" setting
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60)
@@ -15,7 +16,7 @@ function formatTime(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-export default function OTPVerificationPage({ email, onVerified, onBack }: OTPVerificationPageProps) {
+export default function OTPVerificationPage({ email, onVerified, onBack, type = 'signup' }: OTPVerificationPageProps) {
   const [otp, setOtp]         = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -81,7 +82,7 @@ export default function OTPVerificationPage({ email, onVerified, onBack }: OTPVe
     if (code.length < 6) { setError('Please enter the full 6-digit code.'); return }
     setError(null); setLoading(true)
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'signup' })
+      const { error } = await supabase.auth.verifyOtp({ email, token: code, type })
       if (error) throw error
       setShowSuccess(true)
     } catch (err: unknown) {
@@ -102,8 +103,16 @@ export default function OTPVerificationPage({ email, onVerified, onBack }: OTPVe
   const handleResend = useCallback(async () => {
     setResending(true); setError(null)
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email })
-      if (error) throw error
+      if (type === 'magiclink') {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: false },
+        })
+        if (error) throw error
+      } else {
+        const { error } = await supabase.auth.resend({ type: 'signup', email })
+        if (error) throw error
+      }
       // Reset both timers
       setExpiry(OTP_EXPIRY_SECONDS)
       setExpired(false)
@@ -120,7 +129,7 @@ export default function OTPVerificationPage({ email, onVerified, onBack }: OTPVe
     } finally {
       setResending(false)
     }
-  }, [email])
+  }, [email, type])
 
   const allFilled = otp.every(d => d !== '')
 
@@ -145,11 +154,13 @@ export default function OTPVerificationPage({ email, onVerified, onBack }: OTPVe
               </svg>
             </div>
             <h2 style={{ fontFamily: 'Fraunces', fontSize: 26, fontWeight: 700, color: '#1c1917', marginBottom: 10 }}>
-              Registration Successful!
+              {type === 'magiclink' ? 'Signed In!' : 'Registration Successful!'}
             </h2>
             <p style={{ fontSize: 14, color: '#78716c', lineHeight: 1.6, marginBottom: 28 }}>
-              Your account has been verified and created successfully.<br />
-              You can now sign in to <strong style={{ color: '#c2410c' }}>WINGTRACK</strong>.
+              {type === 'magiclink'
+                ? <>You have been successfully signed in to <strong style={{ color: '#c2410c' }}>WINGTRACK</strong>.</>
+                : <>Your account has been verified and created successfully.<br />Welcome to <strong style={{ color: '#c2410c' }}>WINGTRACK</strong>!</>
+              }
             </p>
             <button
               id="success-go-to-login-btn"
@@ -157,7 +168,7 @@ export default function OTPVerificationPage({ email, onVerified, onBack }: OTPVe
               className="btn-primary"
               style={{ width: '100%', padding: '14px', fontSize: 15, fontWeight: 600, borderRadius: 10 }}
             >
-              Go to Login
+              {type === 'magiclink' ? 'Continue' : 'Proceed to Dashboard'}
             </button>
           </div>
         </div>

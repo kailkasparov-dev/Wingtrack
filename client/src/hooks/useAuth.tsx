@@ -15,6 +15,7 @@ interface AuthContextValue {
   signInWithGoogle: () => Promise<void>
   sendPasswordReset: (email: string) => Promise<void>
   updatePassword: (newPassword: string) => Promise<void>
+  sendLoginOtp: (email: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -146,6 +147,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) throw new Error(error.message)
 
+    // Supabase returns an empty identities array if the user already exists
+    if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+      throw new Error('This email is already registered. Please sign in with your password or use the "Email OTP" tab.')
+    }
+
     // Insert staff profile row (may fail silently if email unconfirmed — that's fine)
     if (data?.user) {
       try {
@@ -161,7 +167,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Email confirmation required — never auto-login
+    // If Supabase does not require email confirmation, session is returned immediately
+    if (data?.session) {
+      return { requiresConfirmation: false }
+    }
+
+    // Email confirmation required — verification code sent
     return { requiresConfirmation: true }
   }
 
@@ -187,6 +198,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message)
   }
 
+  async function sendLoginOtp(email: string) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false, // Only existing accounts; prevents accidental new registrations
+      },
+    })
+    if (error) throw new Error(error.message)
+  }
+
   async function signOut() {
     try {
       await supabase.auth.signOut()
@@ -200,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, role: profile?.role ?? null, loading, signIn, signUp, signOut, signInWithGoogle, sendPasswordReset, updatePassword }}
+      value={{ session, user, profile, role: profile?.role ?? null, loading, signIn, signUp, signOut, signInWithGoogle, sendPasswordReset, updatePassword, sendLoginOtp }}
     >
       {children}
     </AuthContext.Provider>

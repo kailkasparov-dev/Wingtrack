@@ -22,6 +22,7 @@ function AppContent() {
   const { session, loading, signOut } = useAuth()
   const [authMode, setAuthMode] = useState<AuthMode>(detectInitialMode)
   const [pendingEmail, setPendingEmail] = useState<string>('')
+  const [otpType, setOtpType] = useState<'signup' | 'magiclink'>('signup')
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   )
@@ -104,6 +105,7 @@ function AppContent() {
     return (
       <OTPVerificationPage
         email={pendingEmail}
+        type={otpType}
         onVerified={() => setAuthMode('login')}
         onBack={() => setAuthMode('login')}
       />
@@ -120,7 +122,11 @@ function AppContent() {
     return (
       <SignUpPage
         onSwitchToLogin={() => setAuthMode('login')}
-        onRegistered={(email) => { setPendingEmail(email); setAuthMode('otp') }}
+        onRegistered={(email) => {
+          setPendingEmail(email)
+          setOtpType('signup')
+          setAuthMode('otp')
+        }}
       />
     )
   }
@@ -129,6 +135,11 @@ function AppContent() {
     <LoginPage
       onSwitchToSignUp={() => setAuthMode('signup')}
       onForgotPassword={() => setAuthMode('forgot')}
+      onOtpSent={(email) => {
+        setPendingEmail(email)
+        setOtpType('magiclink')
+        setAuthMode('otp')
+      }}
     />
   )
 }
