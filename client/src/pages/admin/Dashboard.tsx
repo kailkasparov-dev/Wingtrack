@@ -185,27 +185,27 @@ export default function Dashboard() {
     : `${customFrom} → ${customTo}`
 
   return (
-    <div style={{ padding: '30px 36px', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(16px, 3vw, 30px) clamp(14px, 3vw, 36px)', minHeight: '100%' }}>
       {/* Header */}
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontFamily: 'Fraunces', fontSize: 28, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>
+          <h1 style={{ fontFamily: 'Fraunces', fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>
             {greeting}, Manager
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted-foreground)' }}>
+          <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>
             {new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} · Wingtrack
           </p>
         </div>
 
         {/* Period controls */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           {(['today', 'week', 'month'] as const).map((p, i) => (
             <button
               key={p}
               id={`dashboard-period-${p}`}
               onClick={() => { setPeriod(p); setShowCustom(false) }}
               style={{
-                padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
                 border: '1px solid var(--border)',
                 background: period === p ? 'var(--primary)' : 'var(--card)',
                 color: period === p ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
@@ -220,7 +220,7 @@ export default function Dashboard() {
             id="dashboard-period-custom"
             onClick={() => { setPeriod('custom'); setShowCustom(s => !s) }}
             style={{
-              padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              padding: '7px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
               border: '1px solid var(--border)',
               background: period === 'custom' ? 'var(--primary)' : 'var(--card)',
               color: period === 'custom' ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
@@ -239,7 +239,7 @@ export default function Dashboard() {
       {showCustom && period === 'custom' && (
         <div className="card fade-in" style={{ padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)' }}>Date Range:</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <input
               id="dashboard-date-from"
               type="date"
@@ -247,7 +247,7 @@ export default function Dashboard() {
               value={customFrom}
               max={customTo}
               onChange={e => setCustomFrom(e.target.value)}
-              style={{ padding: '8px 12px', fontSize: 13, width: 160 }}
+              style={{ padding: '7px 10px', fontSize: 12.5, width: 140 }}
             />
             <span style={{ color: 'var(--muted-foreground)', fontSize: 13 }}>to</span>
             <input
@@ -258,14 +258,14 @@ export default function Dashboard() {
               min={customFrom}
               max={toDateInput(new Date())}
               onChange={e => setCustomTo(e.target.value)}
-              style={{ padding: '8px 12px', fontSize: 13, width: 160 }}
+              style={{ padding: '7px 10px', fontSize: 12.5, width: 140 }}
             />
           </div>
           <button
             id="dashboard-apply-range"
             onClick={fetchData}
             className="btn-primary"
-            style={{ padding: '8px 18px', fontSize: 13 }}
+            style={{ padding: '7px 16px', fontSize: 12.5 }}
           >
             Apply
           </button>
@@ -279,7 +279,7 @@ export default function Dashboard() {
       ) : (
         <>
           {/* KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
             <KpiCard label="Total Revenue"    value={`\u20B1${totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`}  sub="Completed orders only"   color="#9b5e28"  trend="up"   />
             <KpiCard label="Total Orders"     value={totalOrders.toString()}   sub="Completed transactions"   color="#c47a2e"  trend="up"   />
             <KpiCard label="Avg. Order Value" value={`\u20B1${avgOrder.toFixed(2)}`}   sub="Per completed order"      color="#7a4520"  trend={avgOrder > 150 ? 'up' : 'down'} />
@@ -287,14 +287,14 @@ export default function Dashboard() {
           </div>
 
           {/* Charts */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 18, marginBottom: 28 }}>
-            <div className="card" style={{ padding: '24px 26px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-4 sm:gap-5 mb-6">
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <div>
                   <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 600, color: 'var(--foreground)' }}>Revenue Trend</h3>
                   <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 3 }}>{periodLabel}</p>
                 </div>
-                <span style={{ fontFamily: 'Fraunces', fontSize: 24, fontWeight: 700, color: 'var(--primary)' }}>
+                <span style={{ fontFamily: 'Fraunces', fontSize: 'clamp(20px, 2.5vw, 24px)', fontWeight: 700, color: 'var(--primary)' }}>
                   &#8369;{totalRevenue.toLocaleString()}
                 </span>
               </div>
@@ -320,7 +320,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
 
-            <div className="card" style={{ padding: '24px 26px' }}>
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 600, color: 'var(--foreground)', marginBottom: 18 }}>Top Sellers</h3>
               {topItems.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>No sales data yet.</p>
@@ -346,9 +346,9 @@ export default function Dashboard() {
           </div>
 
           {/* Bottom row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             {/* Recent transactions */}
-            <div className="card" style={{ padding: '24px 26px' }}>
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                 <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 600, color: 'var(--foreground)' }}>Recent Transactions</h3>
                 <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>{periodLabel}</span>
@@ -356,20 +356,22 @@ export default function Dashboard() {
               {recentOrders.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>No recent orders.</p>
               ) : (
-                <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px 80px', gap: 10, padding: '0 0 10px', borderBottom: '1px solid var(--border)', marginBottom: 10 }}>
-                    {['Order #', 'Method', 'Total', 'Status'].map(h => (
-                      <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <div style={{ minWidth: 340 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 75px 85px 75px', gap: 8, padding: '0 0 10px', borderBottom: '1px solid var(--border)', marginBottom: 10 }}>
+                      {['Order #', 'Method', 'Total', 'Status'].map(h => (
+                        <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                      ))}
+                    </div>
+                    {recentOrders.map(o => (
+                      <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 75px 85px 75px', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--muted)', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)', fontWeight: 500 }}>#{o.order_number}</span>
+                        <span style={{ fontSize: 12, color: 'var(--muted-foreground)', textTransform: 'capitalize' }}>{o.payment_method}</span>
+                        <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)', fontWeight: 600 }}>&#8369;{Number(o.total_amount).toLocaleString()}</span>
+                        <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: o.status === 'void' ? '#fce8e8' : '#e8f5e9', color: o.status === 'void' ? '#c0392b' : '#2e7d32', fontWeight: 600, textAlign: 'center', textTransform: 'capitalize' }}>{o.status}</span>
+                      </div>
                     ))}
                   </div>
-                  {recentOrders.map(o => (
-                    <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px 80px', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--muted)', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)', fontWeight: 500 }}>#{o.order_number}</span>
-                      <span style={{ fontSize: 12, color: 'var(--muted-foreground)', textTransform: 'capitalize' }}>{o.payment_method}</span>
-                      <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)', fontWeight: 600 }}>&#8369;{Number(o.total_amount).toLocaleString()}</span>
-                      <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: o.status === 'void' ? '#fce8e8' : '#e8f5e9', color: o.status === 'void' ? '#c0392b' : '#2e7d32', fontWeight: 600, textAlign: 'center', textTransform: 'capitalize' }}>{o.status}</span>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>

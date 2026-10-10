@@ -115,18 +115,18 @@ export default function StaffManager() {
   }
 
   return (
-    <div style={{ padding: '28px 36px', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(16px, 3vw, 28px) clamp(14px, 3vw, 36px)', minHeight: '100%' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: 'Fraunces', fontSize: 26, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>Staff Manager</h1>
+          <h1 style={{ fontFamily: 'Fraunces', fontSize: 'clamp(22px, 3vw, 26px)', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>Staff Manager</h1>
           <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>Provision and manage Wingtrack staff accounts</p>
         </div>
         <button
           id="btn-add-staff"
           className="btn-primary"
           onClick={() => setShowModal(true)}
-          style={{ padding: '12px 20px', fontSize: 14 }}
+          style={{ padding: '10px 18px', fontSize: 13.5 }}
         >
           + Add Staff Member
         </button>
@@ -139,75 +139,79 @@ export default function StaffManager() {
         </div>
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px 170px 90px 110px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
-            {['Name', 'Email', 'Role', 'Status', 'Actions'].map(h => (
-              <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
-            ))}
-          </div>
-          {staff.map((s, i) => (
-            <div
-              key={s.id}
-              style={{
-                display: 'grid', gridTemplateColumns: '1fr 220px 170px 90px 110px', gap: 0,
-                padding: '16px 22px', borderBottom: i < staff.length - 1 ? '1px solid var(--muted)' : 'none',
-                alignItems: 'center', transition: 'background 0.1s',
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--muted)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            >
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>{s.full_name}</p>
-                <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>ID: {s.id.slice(0, 8)}...</p>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ minWidth: 680 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px 170px 90px 110px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
+                {['Name', 'Email', 'Role', 'Status', 'Actions'].map(h => (
+                  <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                ))}
               </div>
-              <span style={{ fontSize: 13, color: 'var(--muted-foreground)', fontFamily: 'DM Mono', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.email}</span>
-              <div>
-                <span style={{
-                  fontSize: 12, padding: '4px 11px', borderRadius: 20, fontWeight: 600, display: 'inline-block',
-                  background: roleBadge[s.role].bg, color: roleBadge[s.role].color,
-                }}>
-                  {roleLabel[s.role]}
-                </span>
-              </div>
-              <div>
-                <span style={{
-                  fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 700,
-                  background: s.is_active ? '#e8f5e9' : '#f3f4f6', color: s.is_active ? '#15803d' : '#6b7280', display: 'inline-block',
-                }}>
-                  {s.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div>
-                {s.is_active ? (
-                  <button
-                    id={`btn-deactivate-${s.id}`}
-                    onClick={() => setDeactivateTarget({ id: s.id, name: s.full_name })}
-                    style={{
-                      fontSize: 12, padding: '5px 12px', borderRadius: 6,
-                      background: 'transparent', border: '1px solid #fca5a5',
-                      color: 'var(--danger)', cursor: 'pointer', fontWeight: 600,
-                    }}
-                  >
-                    Deactivate
-                  </button>
-                ) : (
-                  <button
-                    id={`btn-reactivate-${s.id}`}
-                    onClick={() => handleReactivate(s.id, s.full_name)}
-                    style={{
-                      fontSize: 12, padding: '5px 12px', borderRadius: 6,
-                      background: 'transparent', border: '1px solid #86efac',
-                      color: '#15803d', cursor: 'pointer', fontWeight: 600,
-                    }}
-                  >
-                    Reactivate
-                  </button>
-                )}
-              </div>
+              {staff.map((s, i) => (
+                <div
+                  key={s.id}
+                  style={{
+                    display: 'grid', gridTemplateColumns: '1fr 220px 170px 90px 110px', gap: 0,
+                    padding: '16px 22px', borderBottom: i < staff.length - 1 ? '1px solid var(--muted)' : 'none',
+                    alignItems: 'center', transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--muted)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                >
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>{s.full_name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>ID: {s.id.slice(0, 8)}...</p>
+                  </div>
+                  <span style={{ fontSize: 13, color: 'var(--muted-foreground)', fontFamily: 'DM Mono', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.email}</span>
+                  <div>
+                    <span style={{
+                      fontSize: 12, padding: '4px 11px', borderRadius: 20, fontWeight: 600, display: 'inline-block',
+                      background: roleBadge[s.role].bg, color: roleBadge[s.role].color,
+                    }}>
+                      {roleLabel[s.role]}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{
+                      fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 700,
+                      background: s.is_active ? '#e8f5e9' : '#f3f4f6', color: s.is_active ? '#15803d' : '#6b7280', display: 'inline-block',
+                    }}>
+                      {s.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div>
+                    {s.is_active ? (
+                      <button
+                        id={`btn-deactivate-${s.id}`}
+                        onClick={() => setDeactivateTarget({ id: s.id, name: s.full_name })}
+                        style={{
+                          fontSize: 12, padding: '5px 12px', borderRadius: 6,
+                          background: 'transparent', border: '1px solid #fca5a5',
+                          color: 'var(--danger)', cursor: 'pointer', fontWeight: 600,
+                        }}
+                      >
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button
+                        id={`btn-reactivate-${s.id}`}
+                        onClick={() => handleReactivate(s.id, s.full_name)}
+                        style={{
+                          fontSize: 12, padding: '5px 12px', borderRadius: 6,
+                          background: 'transparent', border: '1px solid #86efac',
+                          color: '#15803d', cursor: 'pointer', fontWeight: 600,
+                        }}
+                      >
+                        Reactivate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {staff.length === 0 && (
+                <p style={{ padding: '40px 24px', fontSize: 14, color: 'var(--muted-foreground)' }}>No staff accounts yet. Add your first staff member above.</p>
+              )}
             </div>
-          ))}
-          {staff.length === 0 && (
-            <p style={{ padding: '40px 24px', fontSize: 14, color: 'var(--muted-foreground)' }}>No staff accounts yet. Add your first staff member above.</p>
-          )}
+          </div>
         </div>
       )}
 
@@ -227,11 +231,11 @@ export default function StaffManager() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
-            padding: 20,
+            padding: 16,
           }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
         >
-          <div className="card fade-in" style={{ width: '100%', maxWidth: 460, padding: '32px 28px', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+          <div className="card fade-in" style={{ width: '100%', maxWidth: 460, maxHeight: '92vh', overflowY: 'auto', padding: 'clamp(20px, 4vw, 30px) clamp(16px, 4vw, 26px)', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
             <h2 style={{ fontFamily: 'Fraunces', fontSize: 20, fontWeight: 700, color: 'var(--foreground)', marginBottom: 22 }}>
               Add Staff Member
             </h2>

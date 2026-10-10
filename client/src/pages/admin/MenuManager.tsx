@@ -269,7 +269,7 @@ export default function MenuManager() {
   const outOfStockItems = totalItems - activeItems
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 4vw, 36px)', maxWidth: 1400, margin: '0 auto' }}>
       {/* Header */}
       <div
         style={{
@@ -507,7 +507,7 @@ export default function MenuManager() {
         </div>
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as const }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.02)' }}>
@@ -700,7 +700,7 @@ export default function MenuManager() {
               maxWidth: 580,
               maxHeight: '90vh',
               overflowY: 'auto',
-              padding: '28px 30px',
+              padding: 'clamp(16px, 4vw, 28px) clamp(16px, 4vw, 30px)',
               boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
             }}
           >
@@ -1076,7 +1076,7 @@ export default function MenuManager() {
           }}
           onClick={e => { if (e.target === e.currentTarget) setDeleteConfirm(null) }}
         >
-          <div className="card fade-in" style={{ padding: '32px 28px', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+          <div className="card fade-in" style={{ padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 28px)', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
             <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'rgba(185,28,28,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/>

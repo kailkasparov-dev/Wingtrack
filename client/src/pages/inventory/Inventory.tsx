@@ -219,7 +219,7 @@ export default function Inventory() {
   }
 
   return (
-    <div style={{ padding: '28px 36px', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 28px) clamp(16px, 5vw, 36px)', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
@@ -508,7 +508,8 @@ export default function Inventory() {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as const }}>
+              <div style={{ minWidth: 760, display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)' }}>
                 {['Item Name', 'Unit', 'In Stock', 'Min Level', 'Unit Cost', 'Supplier', 'Status', 'Actions'].map(h => (
                   <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
@@ -522,6 +523,7 @@ export default function Inventory() {
                     key={item.id}
                     style={{
                       display: 'grid', gridTemplateColumns: '2fr 80px 105px 105px 115px 150px 90px 110px', gap: 0,
+                      minWidth: 760,
                       padding: '14px 22px', borderBottom: i < filtered.length - 1 ? '1px solid var(--muted)' : 'none',
                       alignItems: 'center', transition: 'background 0.1s',
                     }}
@@ -553,6 +555,7 @@ export default function Inventory() {
               {filtered.length === 0 && (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 14 }}>No items match your filter.</div>
               )}
+              </div>
             </div>
           )}
         </>
@@ -569,7 +572,8 @@ export default function Inventory() {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as const }}>
+              <div style={{ minWidth: 820, display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
                 {['Timestamp', 'Item', 'Type', 'Change', 'Before → After', 'Staff', 'Notes'].map(h => (
                   <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
@@ -591,6 +595,7 @@ export default function Inventory() {
                     key={m.id}
                     style={{
                       display: 'grid', gridTemplateColumns: '150px 200px 110px 100px 140px 140px 1fr', gap: 0,
+                      minWidth: 820,
                       padding: '12px 20px', borderBottom: i < movements.length - 1 ? '1px solid var(--muted)' : 'none',
                       alignItems: 'center', fontSize: 13,
                     }}
@@ -622,6 +627,7 @@ export default function Inventory() {
                   No inventory movements recorded yet.
                 </div>
               )}
+              </div>
             </div>
           )}
         </div>
@@ -647,7 +653,7 @@ export default function Inventory() {
           }}
           onClick={e => { if (e.target === e.currentTarget) setAdjustModal(null) }}
         >
-          <div className="card fade-in" style={{ width: '100%', maxWidth: 440, padding: '30px 26px', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+          <div className="card fade-in" style={{ width: '100%', maxWidth: 440, padding: 'clamp(18px, 4vw, 30px) clamp(16px, 4vw, 26px)', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
             <h2 style={{ fontFamily: 'Fraunces', fontSize: 20, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>
               {adjustModal.type === 'restock' ? 'Restock' : adjustModal.type === 'waste' ? 'Record Waste' : 'Adjust Stock'}
             </h2>
@@ -718,7 +724,7 @@ export default function Inventory() {
           }}
           onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false) }}
         >
-          <div className="card fade-in" style={{ width: '100%', maxWidth: 460, padding: '28px 26px', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+          <div className="card fade-in" style={{ width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: 'clamp(16px, 4vw, 28px) clamp(14px, 4vw, 26px)', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
             <h2 style={{ fontFamily: 'Fraunces', fontSize: 20, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>
               Add New Inventory Item
             </h2>
@@ -899,7 +905,7 @@ export default function Inventory() {
             </div>
 
             {/* Content Area */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(14px, 3vw, 24px) clamp(14px, 4vw, 28px)' }}>
               <div style={{ marginBottom: 18 }}>
                 <h2 style={{ fontFamily: 'Fraunces', fontSize: 22, fontWeight: 700, color: '#1c1917', marginBottom: 4 }}>
                   WINGTRACK — Inventory Movement Report

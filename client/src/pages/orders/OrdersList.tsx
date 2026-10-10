@@ -77,11 +77,11 @@ export default function OrdersList() {
   }
 
   return (
-    <div style={{ padding: '28px 36px', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(16px, 3vw, 28px) clamp(14px, 3vw, 36px)', minHeight: '100%' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: 'Fraunces', fontSize: 26, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>
+          <h1 style={{ fontFamily: 'Fraunces', fontSize: 'clamp(22px, 3vw, 26px)', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>
             Order History & Transactions
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>
@@ -91,7 +91,7 @@ export default function OrdersList() {
         <button
           onClick={fetchOrders}
           className="btn-ghost"
-          style={{ padding: '8px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+          style={{ padding: '7px 14px', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10"/>
@@ -102,14 +102,14 @@ export default function OrdersList() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           id="orders-search"
           className="input"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by Order # or Item..."
-          style={{ width: 280, padding: '9px 14px', fontSize: 13 }}
+          style={{ width: '100%', maxWidth: 280, padding: '8px 14px', fontSize: 13 }}
         />
 
         <div style={{ display: 'flex', gap: 6 }}>
@@ -329,7 +329,7 @@ export default function OrdersList() {
           }}
           onClick={e => { if (e.target === e.currentTarget) setVoidModalOrder(null) }}
         >
-          <div className="card fade-in" style={{ width: '100%', maxWidth: 420, padding: '26px', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
+          <div className="card fade-in" style={{ width: '100%', maxWidth: 420, maxHeight: '92vh', overflowY: 'auto', padding: '24px 22px', boxShadow: '0 25px 60px rgba(0,0,0,0.35)' }}>
             <h3 style={{ fontFamily: 'Fraunces', fontSize: 18, color: '#b91c1c', marginBottom: 10 }}>
               Void Order #{voidModalOrder.order_number}?
             </h3>

@@ -86,6 +86,8 @@ export default function SignUpPage({ onSwitchToLogin, onRegistered }: SignUpPage
     })
   }, [turnstileReady])
 
+
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -326,10 +328,10 @@ export default function SignUpPage({ onSwitchToLogin, onRegistered }: SignUpPage
               </div>
 
               {/* Turnstile */}
-              <div>
+              <div style={{ width: 300, height: 65, overflow: 'hidden', borderRadius: 4 }}>
                 <div ref={turnstileRef} />
-                {!turnstileReady && <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>Loading security check...</p>}
               </div>
+
 
               {/* Error */}
               {error && (

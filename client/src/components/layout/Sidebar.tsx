@@ -97,9 +97,11 @@ const NAV_ITEMS: NavItem[] = [
 interface SidebarProps {
   page: Page
   setPage: (p: Page) => void
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export default function Sidebar({ page, setPage }: SidebarProps) {
+export default function Sidebar({ page, setPage, isOpen = false, onClose }: SidebarProps) {
   const { profile, role, signOut } = useAuth()
   const [showPwdModal, setShowPwdModal] = useState(false)
   const [newPwd, setNewPwd] = useState('')
@@ -154,26 +156,34 @@ export default function Sidebar({ page, setPage }: SidebarProps) {
 
   return (
     <aside
+      className={`fixed lg:static top-0 left-0 bottom-0 z-50 transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none ${
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}
       style={{
         background: 'var(--sidebar)',
         display: 'flex',
         flexDirection: 'column',
         height: '100dvh',
         width: 280,
+        maxWidth: '85vw',
         flexShrink: 0,
       }}
     >
       {/* Brand */}
-      <div style={{ padding: '26px 24px 22px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ padding: '22px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div
           id="brand-logo-btn"
           role="button"
           tabIndex={0}
-          onClick={() => setPage('dashboard')}
+          onClick={() => {
+            setPage('dashboard')
+            onClose?.()
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               setPage('dashboard')
+              onClose?.()
             }
           }}
           style={{
@@ -222,17 +232,45 @@ export default function Sidebar({ page, setPage }: SidebarProps) {
             </span>
           </div>
         </div>
+
+        {onClose && (
+          <button
+            id="sidebar-close-btn"
+            onClick={onClose}
+            className="lg:hidden"
+            style={{
+              background: 'rgba(255,255,255,0.08)',
+              border: 'none',
+              color: 'var(--sidebar-muted)',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-label="Close sidebar"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
         {visibleNav.map(({ id, label, icon: Icon }) => {
           const active = page === id
           return (
             <button
               key={id}
               id={`nav-${id}`}
-              onClick={() => setPage(id)}
+              onClick={() => {
+                setPage(id)
+                onClose?.()
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',

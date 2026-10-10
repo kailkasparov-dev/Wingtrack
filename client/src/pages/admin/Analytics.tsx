@@ -278,11 +278,11 @@ export default function Analytics() {
   }
 
   return (
-    <div style={{ padding: '28px 36px', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(16px, 3vw, 28px) clamp(14px, 3vw, 36px)', minHeight: '100%' }}>
       {/* Header */}
-      <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
         <div>
-          <h1 style={{ fontFamily: 'Fraunces', fontSize: 26, fontWeight: 700, color: 'var(--foreground)', marginBottom: 6 }}>
+          <h1 style={{ fontFamily: 'Fraunces', fontSize: 'clamp(22px, 3vw, 26px)', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>
             Sales Analytics & Reporting
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>
@@ -291,15 +291,15 @@ export default function Analytics() {
         </div>
 
         {/* Action Buttons: Z-Reading, X-Reading, CSV & Periods */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             id="btn-generate-z-reading"
             type="button"
             onClick={() => setShowReading('Z-Reading')}
             style={{
-              padding: '8px 14px',
+              padding: '7px 12px',
               borderRadius: 8,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               background: '#ea580c',
               color: '#ffffff',
@@ -310,7 +310,7 @@ export default function Analytics() {
               gap: 6,
             }}
           >
-            📑 Z-Reading (EOD)
+            📑 Z-Reading
           </button>
 
           <button
@@ -319,9 +319,9 @@ export default function Analytics() {
             className="btn-ghost"
             onClick={() => setShowReading('X-Reading')}
             style={{
-              padding: '8px 14px',
+              padding: '7px 12px',
               borderRadius: 8,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               border: '1px solid var(--border)',
               display: 'flex',
@@ -338,9 +338,9 @@ export default function Analytics() {
             className="btn-ghost"
             onClick={exportOrdersCSV}
             style={{
-              padding: '8px 14px',
+              padding: '7px 12px',
               borderRadius: 8,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 500,
               border: '1px solid var(--border)',
               display: 'flex',
@@ -348,7 +348,7 @@ export default function Analytics() {
               gap: 6,
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
@@ -356,21 +356,22 @@ export default function Analytics() {
             Export CSV
           </button>
 
-          <div style={{ display: 'flex', gap: 6, borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', borderLeft: '1px solid var(--border)', paddingLeft: 6 }}>
             {PERIODS.map(p => (
               <button
                 key={p}
                 id={`analytics-period-${p.replace(/\s/g, '-').toLowerCase()}`}
                 onClick={() => setPeriod(p)}
                 style={{
-                  padding: '7px 14px',
+                  padding: '6px 12px',
                   borderRadius: 8,
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: 500,
                   cursor: 'pointer',
                   border: '1px solid var(--border)',
                   background: period === p ? 'var(--primary)' : 'var(--card)',
                   color: period === p ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {p}
@@ -387,16 +388,16 @@ export default function Analytics() {
       ) : (
         <>
           {/* Summary KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 22 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
             {[
               { label: 'Total Gross Revenue', val: `\u20B1${(totalRev / 1000).toFixed(1)}k`, note: `${totalOrd} completed transactions`, color: '#9b5e28' },
               { label: 'Cost of Goods Sold (COGS)', val: `\u20B1${(cogsTotal / 1000).toFixed(1)}k`, note: 'Recipe ingredients cost', color: '#b91c1c' },
               { label: 'Gross Profit', val: `\u20B1${(grossProfit / 1000).toFixed(1)}k`, note: `${grossMarginPercent.toFixed(1)}% profit margin`, color: '#15803d' },
               { label: 'Avg Basket Size', val: `\u20B1${avgOrder.toFixed(0)}`, note: `Best: ${bestMonth?.month ?? '-'}`, color: '#c47a2e' },
             ].map(k => (
-              <div key={k.label} className="card" style={{ padding: '22px 24px' }}>
+              <div key={k.label} className="card" style={{ padding: 'clamp(16px, 2vw, 22px) clamp(16px, 2vw, 24px)' }}>
                 <p style={{ fontSize: 11, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: 'DM Mono' }}>{k.label}</p>
-                <p style={{ fontFamily: 'Fraunces', fontSize: 28, fontWeight: 700, color: k.color, lineHeight: 1 }}>{k.val}</p>
+                <p style={{ fontFamily: 'Fraunces', fontSize: 'clamp(24px, 2.5vw, 28px)', fontWeight: 700, color: k.color, lineHeight: 1 }}>{k.val}</p>
                 <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 8 }}>{k.note}</p>
               </div>
             ))}
@@ -454,8 +455,8 @@ export default function Analytics() {
           </div>
 
           {/* Revenue trend + pie */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 18, marginBottom: 22 }}>
-            <div className="card" style={{ padding: '24px 26px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] xl:grid-cols-[1fr_320px] gap-4 sm:gap-5 mb-6">
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 600, marginBottom: 4, color: 'var(--foreground)' }}>
                 {period === 'Today' ? 'Hourly Sales Distribution' : 'Revenue Trend'}
               </h3>
@@ -477,7 +478,7 @@ export default function Analytics() {
               </ResponsiveContainer>
             </div>
 
-            <div className="card" style={{ padding: '24px 26px' }}>
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 600, marginBottom: 4, color: 'var(--foreground)' }}>Sales by Category</h3>
               <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginBottom: 12 }}>% of total units ordered</p>
               <ResponsiveContainer width="100%" height={150}>
@@ -503,9 +504,9 @@ export default function Analytics() {
           </div>
 
           {/* Dual Leaderboards: Wing Flavors Ranking + Top Products */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             {/* Wing Flavors Leaderboard */}
-            <div className="card" style={{ padding: '24px 26px' }}>
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
                   <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>
@@ -520,35 +521,39 @@ export default function Analytics() {
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 90px 65px', gap: 10, padding: '0 0 10px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-                {['Flavor', 'Sold', 'Revenue', 'Share'].map(h => (
-                  <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>{h}</span>
-                ))}
-              </div>
-
-              {wingFlavors.map((f, i) => {
-                const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
-                return (
-                  <div key={f.name} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 90px 65px', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--muted)', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>{rankBadge}</span>
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--foreground)' }}>{f.name}</span>
-                    </div>
-                    <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--foreground)' }}>{f.orders} pcs</span>
-                    <span style={{ fontSize: 13, fontFamily: 'DM Mono', fontWeight: 700, color: 'var(--primary)' }}>
-                      &#8369;{(f.revenue / 1000).toFixed(1)}k
-                    </span>
-                    <span style={{ fontSize: 12, fontFamily: 'DM Mono', color: 'var(--muted-foreground)' }}>{f.sharePercent}%</span>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <div style={{ minWidth: 300 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 65px 85px 55px', gap: 8, padding: '0 0 10px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
+                    {['Flavor', 'Sold', 'Revenue', 'Share'].map(h => (
+                      <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>{h}</span>
+                    ))}
                   </div>
-                )
-              })}
-              {wingFlavors.length === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--muted-foreground)', padding: '16px 0' }}>No wing flavor sales recorded.</p>
-              )}
+
+                  {wingFlavors.map((f, i) => {
+                    const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
+                    return (
+                      <div key={f.name} style={{ display: 'grid', gridTemplateColumns: '1fr 65px 85px 55px', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--muted)', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 14 }}>{rankBadge}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)' }}>{f.name}</span>
+                        </div>
+                        <span style={{ fontSize: 12.5, fontFamily: 'DM Mono', color: 'var(--foreground)' }}>{f.orders} pcs</span>
+                        <span style={{ fontSize: 13, fontFamily: 'DM Mono', fontWeight: 700, color: 'var(--primary)' }}>
+                          &#8369;{(f.revenue / 1000).toFixed(1)}k
+                        </span>
+                        <span style={{ fontSize: 12, fontFamily: 'DM Mono', color: 'var(--muted-foreground)' }}>{f.sharePercent}%</span>
+                      </div>
+                    )
+                  })}
+                  {wingFlavors.length === 0 && (
+                    <p style={{ fontSize: 13, color: 'var(--muted-foreground)', padding: '16px 0' }}>No wing flavor sales recorded.</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Top Products Overall */}
-            <div className="card" style={{ padding: '24px 26px' }}>
+            <div className="card" style={{ padding: 'clamp(18px, 2.5vw, 24px) clamp(18px, 2.5vw, 26px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
                   <h3 style={{ fontFamily: 'Fraunces', fontSize: 17, fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>
@@ -560,27 +565,31 @@ export default function Analytics() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 110px', gap: 10, padding: '0 0 10px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-                {['Item', 'Qty', 'Revenue'].map(h => (
-                  <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>{h}</span>
-                ))}
-              </div>
-
-              {topProducts.map((p, i) => (
-                <div key={p.name} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 110px', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--muted)', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 12, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', minWidth: 16 }}>{i + 1}</span>
-                    <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--foreground)' }}>{p.name}</span>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <div style={{ minWidth: 280 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 95px', gap: 8, padding: '0 0 10px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
+                    {['Item', 'Qty', 'Revenue'].map(h => (
+                      <span key={h} style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>{h}</span>
+                    ))}
                   </div>
-                  <span style={{ fontSize: 13, fontFamily: 'DM Mono', color: 'var(--muted-foreground)' }}>{p.orders}</span>
-                  <span style={{ fontSize: 13.5, fontFamily: 'DM Mono', fontWeight: 700, color: 'var(--primary)' }}>
-                    &#8369;{(p.revenue / 1000).toFixed(1)}k
-                  </span>
+
+                  {topProducts.map((p, i) => (
+                    <div key={p.name} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 95px', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--muted)', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12, fontFamily: 'DM Mono', color: 'var(--muted-foreground)', minWidth: 16 }}>{i + 1}</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--foreground)' }}>{p.name}</span>
+                      </div>
+                      <span style={{ fontSize: 12.5, fontFamily: 'DM Mono', color: 'var(--muted-foreground)' }}>{p.orders}</span>
+                      <span style={{ fontSize: 13, fontFamily: 'DM Mono', fontWeight: 700, color: 'var(--primary)' }}>
+                        &#8369;{(p.revenue / 1000).toFixed(1)}k
+                      </span>
+                    </div>
+                  ))}
+                  {topProducts.length === 0 && (
+                    <p style={{ fontSize: 13, color: 'var(--muted-foreground)', padding: '16px 0' }}>No product data for this period.</p>
+                  )}
                 </div>
-              ))}
-              {topProducts.length === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--muted-foreground)', padding: '16px 0' }}>No product data for this period.</p>
-              )}
+              </div>
             </div>
           </div>
         </>

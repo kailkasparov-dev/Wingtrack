@@ -44,9 +44,11 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
         style={{
           width: '100%',
           maxWidth: 420,
+          maxHeight: '90vh',
+          overflowY: 'auto',
           background: '#ffffff',
           color: '#1a1a1a',
-          padding: '28px 24px',
+          padding: 'clamp(16px, 4vw, 28px) clamp(14px, 4vw, 24px)',
           boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
           borderRadius: 12,
         }}
